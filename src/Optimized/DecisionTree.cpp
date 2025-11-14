@@ -17,12 +17,14 @@ double DecisionTree::gini_from_counts(const std::unordered_map<int, int> &counts
     if (total == 0) return 0.0;
     double sum = 0.0;
     for (const auto &p: counts) {
+        //
         const double pclass = static_cast<double>(p.second) / static_cast<double>(total);
         sum += pclass * pclass;
     }
     return 1.0 - sum;
 }
 
+// Gini impurity of labels y
 double DecisionTree::gini(const std::vector<int> &y) {
     if (y.empty()) return 0.0;
     std::unordered_map<int, int> counts;
@@ -30,6 +32,7 @@ double DecisionTree::gini(const std::vector<int> &y) {
     return gini_from_counts(counts, y.size());
 }
 
+// Chooses the majority label
 int DecisionTree::majority_label_from_counts(const std::unordered_map<int, int> &counts) {
     int best_label = 0;
     int best_count = -1;
