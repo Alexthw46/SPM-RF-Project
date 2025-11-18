@@ -3,51 +3,10 @@
 #include <fstream>
 #include <sstream>
 #include "RandomForest.hpp"
+#include "util/CSVLoader.hpp"
 using namespace std;
 
 constexpr bool debug = false;
-
-// Helper function to load Iris CSV
-bool loadCSV(const string &filename, vector<vector<double> > &X, vector<int> &y) {
-    ifstream file(filename);
-    if (!file.is_open()) return false;
-
-    string line;
-    // Skip header
-    if (!getline(file, line)) return false;
-
-    // Automap the string labels to integer classes
-    unordered_map<string, int> label_map;
-    int label_counter = 0;
-
-    while (getline(file, line)) {
-        stringstream ss(line);
-        string cell;
-        vector<double> features;
-
-        vector<string> tokens;
-        while (getline(ss, cell, ',')) tokens.push_back(cell);
-
-        // Last column is the label (string)
-        string str_label = tokens.back();
-        tokens.pop_back();
-
-        // Map string labels to integers
-        if (!label_map.contains(str_label)) {
-            label_map[str_label] = label_counter++;
-        }
-        int label = label_map[str_label];
-
-        // Convert remaining tokens to features
-        for (const auto &t: tokens) features.push_back(stod(t));
-
-        X.push_back(features);
-        y.push_back(label);
-    }
-
-    file.close();
-    return true;
-}
 
 int main() {
     vector<vector<double> > X;
@@ -56,7 +15,7 @@ int main() {
     // Replace with path to your CSV
     const string csv_file = "../test/Iris.csv";
 
-    if (!loadCSV(csv_file, X, y)) {
+    if (!util::CSVLoader::loadCSV(csv_file, X, y)) {
         cerr << "Failed to open CSV file.\n";
         return 1;
     }

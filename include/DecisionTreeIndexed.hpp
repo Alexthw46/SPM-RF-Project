@@ -19,7 +19,7 @@ private:
     int min_samples;
     std::mt19937 gen;
 
-    [[nodiscard]] static double gini_from_counts(const std::unordered_map<int, int> &counts, size_t total);
+    [[nodiscard]] static double gini_from_counts(const std::unordered_map<int, int> &counts, size_t n_features);
 
     [[nodiscard]] static double gini(const std::vector<int> &y);
 

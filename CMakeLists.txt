@@ -21,7 +21,7 @@ add_executable(RandomForestSeq
         src/Seq/RandomForest.cpp
 )
 
-add_executable(RandomForestOptimized
+add_executable(RandomForestIndexed
         src/Optimized/main.cpp
         src/Optimized/DecisionTree.cpp
         src/Optimized/RandomForest.cpp

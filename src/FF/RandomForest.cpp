@@ -1,4 +1,4 @@
-#include "DecisionTreeO.hpp"
+#include "DecisionTreeIndexed.hpp"
 #include <ff/ff.hpp>
 #include <ff/farm.hpp>
 #include <vector>

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <random>
-#include "DecisionTreeO.hpp"
+#include "DecisionTreeIndexed.hpp"
 
 class RandomForest {
 public:

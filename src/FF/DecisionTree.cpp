@@ -6,18 +6,18 @@
 #include <algorithm>
 #include <cmath>
 #include <ranges>
-#include "DecisionTreeO.hpp"
+#include "DecisionTreeIndexed.hpp"
 
 
 DecisionTree::DecisionTree(const int max_depth_, const int min_samples_, const unsigned int seed)
     : max_depth(max_depth_), min_samples(min_samples_), gen(seed) {
 }
 
-double DecisionTree::gini_from_counts(const std::unordered_map<int, int> &counts, const size_t total) {
-    if (total == 0) return 0.0;
+double DecisionTree::gini_from_counts(const std::unordered_map<int, int> &counts, const size_t n_features) {
+    if (n_features == 0) return 0.0;
     double sum = 0.0;
     for (const auto &p: counts) {
-        const double pclass = static_cast<double>(p.second) / static_cast<double>(total);
+        const double pclass = static_cast<double>(p.second) / static_cast<double>(n_features);
         sum += pclass * pclass;
     }
     return 1.0 - sum;

@@ -1,4 +1,4 @@
-#include "DecisionTreeO.hpp"
+#include "DecisionTreeIndexed.hpp"
 #include <vector>
 #include <memory>
 #include <random>
