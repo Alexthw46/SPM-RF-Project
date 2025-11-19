@@ -45,7 +45,7 @@ int main() {
     }
 
     // Create and train the random forest
-    RandomForest rf(5, 5, 3);
+    RandomForest rf(50, 5, 3);
     rf.fit(X, y);
 
     // Evaluate accuracy on full dataset

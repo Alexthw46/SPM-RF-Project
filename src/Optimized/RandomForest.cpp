@@ -45,6 +45,7 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
                 << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
                 << " ns" << endl;
     }
+    cout << "All trees built Sequentially." << endl;
 
     const auto total_end = chrono::high_resolution_clock::now();
     cout << "[Timing] RandomForest fit() total time: "
