@@ -1,138 +1,79 @@
+#include "RandomForestIndexed.hpp"
 #include "DecisionTreeIndexed.hpp"
-#include <ff/ff.hpp>
-#include <ff/farm.hpp>
-#include <vector>
-#include <thread>
-#include <memory>
+
+#include <algorithm>
 #include <random>
-#include <queue>
-#include <mutex>
+#include <unordered_map>
+#include <chrono>
+#include <iostream>
+using namespace std;
 
-using namespace ff;
+// Constructor
+RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
+    // Initialize trees
+    for (int i = 0; i < n_trees; i++)
+        trees.emplace_back(max_depth, 2, seed + i); // each tree gets unique deterministic seed
+}
 
-// A small task struct
-struct BuildTask {
-    int tree_id{};
-    unsigned int seed{};
-    std::vector<size_t> sample_idx;
-};
+// Train forest with bootstrap sampling (index-based, no copies)
+void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
+    const auto total_start = chrono::high_resolution_clock::now();
 
-// Collector will receive built trees (wrapped as raw pointer)
-struct Result {
-    int tree_id;
-    DecisionTree* tree_ptr; // ownership transferred to collector thread
-};
 
-// Emitter node: creates tasks
-class Emitter final : public ff_node {
-public:
-    Emitter(std::queue<BuildTask>& tasks, std::mutex& m) : tasks(tasks), mtx(m) {}
-    void* svc(void*) override {
-        std::lock_guard<std::mutex> lk(mtx);
-        // feed tasks one by one to farm
-        while (!tasks.empty()) {
-            const BuildTask t = std::move(tasks.front());
-            tasks.pop();
-            ff_send_out(new BuildTask(t));
-        }
-        return EOS; // no more tasks
-    }
-private:
-    std::queue<BuildTask>& tasks;
-    std::mutex& mtx;
-};
+    // Distribution to use for bootstrap sampling
+    uniform_int_distribution<size_t> dist(0, X.size() - 1);
 
-// Worker: builds a tree and returns Result*
-class Worker final : public ff_node {
-public:
-    Worker(const std::vector<std::vector<double>>& X,
-           const std::vector<int>& y,
-           const int max_depth, const int min_samples)
-        : X(X), y(y), max_depth(max_depth), min_samples(min_samples) {}
+    // Fit each tree on a bootstrap sample
+    for (size_t i = 0; i < trees.size(); i++) {
+        auto &t = trees[i];
 
-    void* svc(void* task) override {
-        const auto* bt = static_cast<BuildTask*>(task);
-        auto* tree = new DecisionTree(max_depth, min_samples, bt->seed);
-        tree->fit(X, y, bt->sample_idx);
-        auto* res = new Result{bt->tree_id, tree};
-        delete bt;
-        return res;
-    }
-private:
-    const std::vector<std::vector<double>>& X;
-    const std::vector<int>& y;
-    int max_depth;
-    int min_samples;
-};
 
-// Collector: gathers results into provided vector
-class Collector final : public ff_node {
-public:
-    Collector(std::vector<DecisionTree*>& outvec, std::mutex& m) : out(outvec), mtx(m) {}
-    void* svc(void* task) override {
-        const auto* r = static_cast<Result*>(task);
-        {
-            std::lock_guard<std::mutex> lk(mtx);
-            out[r->tree_id] = r->tree_ptr;
-        }
-        delete r;
-        return GO_ON;
-    }
-private:
-    std::vector<DecisionTree*>& out;
-    std::mutex& mtx;
-};
+        // Generates indices to create the bootstrap sample to build the tree
+        // (no copies of data)
+        vector<size_t> bootstrap_idx;
+        bootstrap_idx.reserve(X.size());
+        for (size_t j = 0; j < X.size(); j++)
+            bootstrap_idx.push_back(dist(gen));
 
-// train forest using FastFlow farm
-std::vector<std::unique_ptr<DecisionTree>> train_forest_fastflow(
-    const std::vector<std::vector<double>>& X,
-    const std::vector<int>& y,
-    int n_trees,
-    int max_depth,
-    int min_samples,
-    size_t sample_size,
-    unsigned int base_seed,
-    int n_workers = 0) // 0 => auto
-{
-    if (sample_size == 0) sample_size = X.size();
-    // prepare tasks
-    std::queue<BuildTask> tasks;
-    for (int t = 0; t < n_trees; ++t) {
-        unsigned int seed = base_seed + static_cast<unsigned int>(t);
-        std::mt19937 rng(seed);
-        std::uniform_int_distribution<size_t> dist(0, X.size() - 1);
-        BuildTask bt;
-        bt.tree_id = t;
-        bt.seed = seed;
-        bt.sample_idx.reserve(sample_size);
-        for (size_t i = 0; i < sample_size; ++i) bt.sample_idx.push_back(dist(rng));
-        tasks.push(std::move(bt));
+        // Time the fitting of each tree
+        const auto t_start = chrono::high_resolution_clock::now();
+        t.fit(X, y, bootstrap_idx);
+        const auto t_end = chrono::high_resolution_clock::now();
+
+        cout << "[Timing] Tree " << i << " trained in "
+                << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
+                << " ns" << endl;
     }
 
-    std::mutex task_mtx;
-    std::vector<DecisionTree*> raw_out(n_trees, nullptr);
-    std::mutex out_mtx;
+    const auto total_end = chrono::high_resolution_clock::now();
+    cout << "[Timing] RandomForest fit() total time: "
+            << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
+            << " ns" << endl;
+}
 
-    // build worker vector
-    std::vector<std::unique_ptr<ff_node>> workers;
-    if (n_workers <= 0) n_workers = std::min<int>(n_trees, std::thread::hardware_concurrency());
-    for (int i = 0; i < n_workers; ++i)
-        workers.emplace_back(std::make_unique<Worker>(X, y, max_depth, min_samples));
+// Predict for one sample
+int RandomForest::predict(const vector<double> &x) const {
+    unordered_map<int, int> vote_count;
+    // Collect votes from each tree
+    for (const auto &t: trees) {
+        int p = t.predict(x);
+        vote_count[p]++;
+    } // Return label with most votes
+    return ranges::max_element(vote_count.begin(), vote_count.end(),
+                               [](const auto &a, const auto &b) { return a.second < b.second; })->first;
+}
 
-    Emitter emitter(tasks, task_mtx);
-    Collector collector(raw_out, out_mtx);
-
-    std::vector<ff_node*> wptrs;
-    for (auto &w : workers) wptrs.push_back(w.get());
-
-    ff_farm farm(std::move(wptrs), &emitter, &collector);
-    farm.remove_emitter();
-    farm.run_and_wait_end();
-
-    // move into unique_ptr vector
-    std::vector<std::unique_ptr<DecisionTree>> forest;
-    forest.reserve(n_trees);
-    for (int i = 0; i < n_trees; ++i) forest.emplace_back(raw_out[i]);
-
-    return forest;
+// Batch prediction
+vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const {
+    const auto start = chrono::high_resolution_clock::now();
+    vector<int> predictions;
+    predictions.reserve(X.size());
+    for (auto &row: X)
+        predictions.push_back(predict(row));
+    const auto end = chrono::high_resolution_clock::now();
+    cout << "[Timing] RandomForest predict_batch() total time: "
+            << chrono::duration_cast<chrono::nanoseconds>(end - start).count()
+            << " ns" << endl;
+    return predictions;
 }
