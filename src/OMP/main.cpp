@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include "RandomForest.hpp"
-#include "util/CSVLoader.hpp"
+#include "CSVLoader.hpp"
 using namespace std;
 
 constexpr bool debug = false;
@@ -15,7 +15,7 @@ int main() {
     // Replace with path to your CSV
     const string csv_file = "../test/Iris.csv";
 
-    if (!util::CSVLoader::loadCSV(csv_file, X, y)) {
+    if (!CSVLoader::loadCSV(csv_file, X, y)) {
         cerr << "Failed to open CSV file.\n";
         return 1;
     }

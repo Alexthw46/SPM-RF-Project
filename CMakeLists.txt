@@ -11,7 +11,14 @@ else ()
     message(FATAL_ERROR "FastFlow headers not found. Set FF_HOME or install fastflow in $HOME/fastflow.")
 endif ()
 
+find_package(MPI REQUIRED COMPONENTS CXX)
+find_package(OpenMP REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
+add_compile_options(-Wall)
+
+set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -g -fno-inline-functions")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -DNDEBUG")
 
 include_directories(include)
 
@@ -38,3 +45,13 @@ add_executable(RandomForestOMP
         src/OMP/DecisionTree.cpp
         src/OMP/RandomForest.cpp
 )
+
+add_executable(RandomForestMPI
+        src/MPI/main.cpp
+        src/MPI/DecisionTree.cpp
+        src/MPI/RandomForest.cpp
+)
+
+target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)
+
+target_link_libraries(RandomForestMPI PRIVATE MPI::MPI_CXX)

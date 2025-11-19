@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 using namespace std;
+constexpr bool verbose = false;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
@@ -17,39 +18,40 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)
-void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
-    const auto total_start = chrono::high_resolution_clock::now();
+void RandomForest::fit(const std::vector<std::vector<double> > &X,
+                       const std::vector<int> &y) {
+    const auto total_start = std::chrono::high_resolution_clock::now();
 
+    std::vector<std::vector<size_t> > bootstrap_indices(n_trees);
 
-    // Distribution to use for bootstrap sampling
-    uniform_int_distribution<size_t> dist(0, X.size() - 1);
+    // Parallel loop over trees
+#pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
+        // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
+        std::mt19937 rng(gen() + i);
+        std::uniform_int_distribution<size_t> dist(0, X.size() - 1);
 
-    // Fit each tree on a bootstrap sample
-    for (size_t i = 0; i < trees.size(); i++) {
-        auto &t = trees[i];
+        // Bootstrap indices
+        bootstrap_indices[i].resize(X.size());
+        for (size_t j = 0; j < X.size(); ++j)
+            bootstrap_indices[i][j] = dist(rng);
 
+        // Fit the tree
+        const auto t_start = std::chrono::high_resolution_clock::now();
+        trees[i].fit(X, y, bootstrap_indices[i]);
+        const auto t_end = std::chrono::high_resolution_clock::now();
 
-        // Generates indices to create the bootstrap sample to build the tree
-        // (no copies of data)
-        vector<size_t> bootstrap_idx;
-        bootstrap_idx.reserve(X.size());
-        for (size_t j = 0; j < X.size(); j++)
-            bootstrap_idx.push_back(dist(gen));
-
-        // Time the fitting of each tree
-        const auto t_start = chrono::high_resolution_clock::now();
-        t.fit(X, y, bootstrap_idx);
-        const auto t_end = chrono::high_resolution_clock::now();
-
-        cout << "[Timing] Tree " << i << " trained in "
-                << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
-                << " ns" << endl;
+#pragma omp critical
+        if (verbose)
+            std::cout << "[Timing] Tree " << i << " trained in "
+                    << std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count()
+                    << " ns\n";
     }
 
-    const auto total_end = chrono::high_resolution_clock::now();
-    cout << "[Timing] RandomForest fit() total time: "
-            << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
-            << " ns" << endl;
+    const auto total_end = std::chrono::high_resolution_clock::now();
+    std::cout << "[Timing] RandomForest fit() total time: "
+            << std::chrono::duration_cast<std::chrono::nanoseconds>(total_end - total_start).count()
+            << " ns\n";
 }
 
 // Predict for one sample
@@ -66,11 +68,14 @@ int RandomForest::predict(const vector<double> &x) const {
 
 // Batch prediction
 vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const {
+    const size_t N = X.size();
+    vector<int> predictions(N);
     const auto start = chrono::high_resolution_clock::now();
-    vector<int> predictions;
-    predictions.reserve(X.size());
-    for (auto &row: X)
-        predictions.push_back(predict(row));
+
+#pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < N; ++i)
+        predictions[i] = predict(X[i]);
+
     const auto end = chrono::high_resolution_clock::now();
     cout << "[Timing] RandomForest predict_batch() total time: "
             << chrono::duration_cast<chrono::nanoseconds>(end - start).count()

@@ -8,10 +8,6 @@ public:
     explicit RandomForest(int n_t = 5, int max_depth = 5, int n_classes = 2,
                           unsigned int seed = std::random_device{}());
 
-    void create_bootstrap_indexes(const std::vector<std::vector<double>> &X,
-                                  std::uniform_int_distribution<unsigned long> dist,
-                                  std::vector<unsigned long> &bootstrap_idx);
-
     void fit(const std::vector<std::vector<double>>& X, const std::vector<int>& y);
     [[nodiscard]] int predict(const std::vector<double>& x) const;
 
