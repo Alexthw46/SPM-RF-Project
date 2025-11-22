@@ -54,4 +54,4 @@ add_executable(RandomForestMPI
 
 target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)
 
-target_link_libraries(RandomForestMPI PRIVATE MPI::MPI_CXX)
+target_link_libraries(RandomForestMPI PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX)

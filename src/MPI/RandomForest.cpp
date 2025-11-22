@@ -12,6 +12,8 @@
 
 using namespace std;
 
+constexpr bool verbose = true;
+
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
@@ -20,9 +22,8 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
         trees.emplace_back(max_depth, 2, seed + i); // each tree gets unique deterministic seed
 }
 
-void RandomForest::fit(const vector<vector<double>> &X,
-                           const vector<int> &y)
-{
+void RandomForest::fit(const vector<vector<double> > &X,
+                       const vector<int> &y) {
     int rank, n_ranks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
@@ -31,23 +32,30 @@ void RandomForest::fit(const vector<vector<double>> &X,
     const size_t start_tree = rank * trees_per_rank;
     const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
 
-    uniform_int_distribution<size_t> dist(0, X.size() - 1);
+    std::vector<std::vector<size_t> > bootstrap_indices(end_tree - start_tree);
 
     const auto total_start = chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(static) default(none) shared(X,y ,bootstrap_indices, verbose, rank, start_tree, end_tree, cout)
+    for (size_t idx = start_tree; idx < end_tree; ++idx) {
+        const size_t local_idx = idx - start_tree;
 
-    for (size_t i = start_tree; i < end_tree; ++i) {
-        vector<size_t> bootstrap_idx(X.size());
+        std::mt19937 rng(gen() + idx);
+        std::uniform_int_distribution<size_t> dist(0, X.size() - 1);
+
+        bootstrap_indices[local_idx].resize(X.size());
         for (size_t j = 0; j < X.size(); ++j)
-            bootstrap_idx[j] = dist(gen);
+            bootstrap_indices[local_idx][j] = dist(rng);
 
         const auto t_start = chrono::high_resolution_clock::now();
-        trees[i].fit(X, y, bootstrap_idx);
+        trees[idx].fit(X, y, bootstrap_indices[local_idx]);
         const auto t_end = chrono::high_resolution_clock::now();
 
-        cout << "[Rank " << rank << "] Tree " << i
-                  << " trained in "
-                  << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
-                  << " ns\n";
+        if (verbose)
+#pragma omp critical
+            cout << "[Rank " << rank << "] Tree " << idx
+                    << " trained in "
+                    << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
+                    << " ns\n";
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -55,8 +63,8 @@ void RandomForest::fit(const vector<vector<double>> &X,
 
     if (rank == 0)
         cout << "[Timing] RandomForest MPI fit() total time: "
-                  << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
-                  << " ns\n";
+                << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
+                << " ns\n";
 }
 
 // Predict for one sample
@@ -72,7 +80,7 @@ int RandomForest::predict(const vector<double> &x) const {
 }
 
 // Batch prediction
-vector<int> RandomForest::predict_batch(const vector<vector<double>> &X) const {
+vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const {
     int rank, n_ranks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
@@ -94,10 +102,10 @@ vector<int> RandomForest::predict_batch(const vector<vector<double>> &X) const {
     vector<int> counts(n_ranks);
     vector<int> displs(n_ranks);
     for (int r = 0; r < n_ranks; ++r) {
-        const size_t s = r * chunk_size;
+        const size_t s = static_cast<size_t>(r) * chunk_size;
         const size_t e = min(s + chunk_size, N);
-        counts[r] = e - s;
-        displs[r] = s;
+        counts[r] = static_cast<int>(e - s);
+        displs[r] = static_cast<int>(s);
     }
 
     MPI_Gatherv(local_predictions.data(), local_predictions.size(), MPI_INT,

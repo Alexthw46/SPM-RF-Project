@@ -25,7 +25,7 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
     std::vector<std::vector<size_t> > bootstrap_indices(n_trees);
 
     // Parallel loop over trees
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) default(none) shared(X,y, bootstrap_indices, verbose, cout)
     for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
         // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
         std::mt19937 rng(gen() + i);
@@ -40,9 +40,8 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
         const auto t_start = std::chrono::high_resolution_clock::now();
         trees[i].fit(X, y, bootstrap_indices[i]);
         const auto t_end = std::chrono::high_resolution_clock::now();
-
-#pragma omp critical
         if (verbose)
+#pragma omp critical
             std::cout << "[Timing] Tree " << i << " trained in "
                     << std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count()
                     << " ns\n";
@@ -72,7 +71,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
     vector<int> predictions(N);
     const auto start = chrono::high_resolution_clock::now();
 
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) default(none) shared(X, predictions, N)
     for (size_t i = 0; i < N; ++i)
         predictions[i] = predict(X[i]);
 
