@@ -5,9 +5,17 @@
 #include "CSVLoader.hpp"
 using namespace std;
 
-constexpr bool debug = false;
+int main(int argc, char *argv[]) {
+    bool debug = false;
+    string csv_file = "../test/Iris.csv";
+    for (int i = 1; i < argc; ++i) {
+        if (string a = argv[i]; a == "-d" || a == "--debug") {
+            debug = true;
+        } else {
+            csv_file = a;
+        }
+    }
 
-int main(int argc, char** argv) {
     // Initialize MPI
     MPI_Init(&argc, &argv);
 
@@ -19,8 +27,6 @@ int main(int argc, char** argv) {
     vector<int> y;
 
     // Replace with path to your CSV
-    const string csv_file = "../test/Iris.csv";
-
     if (!CSVLoader::loadCSV(csv_file, X, y)) {
         if (rank == 0) cerr << "Failed to open CSV file.\n";
         MPI_Finalize();
@@ -45,7 +51,7 @@ int main(int argc, char** argv) {
 
     // Print first few rows for debugging (only rank 0)
     if (rank == 0 && debug) {
-        size_t to_print = min<size_t>(5, X.size());
+        const size_t to_print = min<size_t>(5, X.size());
         for (size_t i = 0; i < to_print; ++i) {
             cout << "Row " << i << ": [";
             for (size_t j = 0; j < X[i].size(); ++j) {

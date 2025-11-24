@@ -4,11 +4,32 @@
 #include <unordered_map>
 #include "Node.hpp"
 
+
+/**
+ * @brief Lightweight view wrapper for column-major data.
+ *
+ * Provides read-only access to a 2D dataset stored in column-major layout.
+ * Used to access a transposed row-major dataset without changing the original access patterns.
+ * (outer vector indexes features, inner vector indexes samples).
+ */
+struct ColMajorView {
+    /** Reference to column-major data: outer index = feature, inner index = sample. */
+    const std::vector<std::vector<double> > &data;
+
+    /**
+     * @brief Access the value for sample `i` and feature `f`.
+     * @param i Sample index (row in a logical row-major view).
+     * @param f Feature index (column).
+     * @return The value at data[f][i].
+     */
+    double operator()(const size_t i, const size_t f) const { return data[f][i]; }
+};
+
 class DecisionTree {
 public:
     DecisionTree(int max_depth_, int min_samples_, unsigned int seed);
 
-    void fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y,
+    void fit(const ColMajorView &Xc, const std::vector<int> &y,
              const std::vector<size_t> &indices); // build from indices
     [[nodiscard]] int predict(const std::vector<double> &x) const;
 
@@ -25,10 +46,10 @@ private:
 
     [[nodiscard]] static int majority_label_from_counts(const std::unordered_map<int, int> &counts);
 
-    Node *build(const std::vector<std::vector<double> > &X,
-                const std::vector<int> &y,
-                const std::vector<size_t> &indices,
-                int depth);
+    Node *build(const ColMajorView &Xc,
+                              const std::vector<int> &y,
+                              const std::vector<size_t> &indices,
+                              int depth);
 
     static int predict_one(const Node *node, const std::vector<double> &x);
 };

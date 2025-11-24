@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <chrono>
 #include <iostream>
+
+#include "CSVLoader.hpp"
 using namespace std;
 
 // Constructor
@@ -24,10 +26,12 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     // Distribution to use for bootstrap sampling
     uniform_int_distribution<size_t> dist(0, X.size() - 1);
 
+    // Transpose the sample-feature matrix once
+    const ColMajorView Xc = {CSVLoader::transpose(X)};
+
     // Fit each tree on a bootstrap sample
     for (size_t i = 0; i < trees.size(); i++) {
         auto &t = trees[i];
-
 
         // Generates indices to create the bootstrap sample to build the tree
         // (no copies of data)
@@ -38,7 +42,7 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
 
         // Time the fitting of each tree
         const auto t_start = chrono::high_resolution_clock::now();
-        t.fit(X, y, bootstrap_idx);
+        t.fit(Xc, y, bootstrap_idx);
         const auto t_end = chrono::high_resolution_clock::now();
 
         cout << "[Timing] Tree " << i << " trained in "

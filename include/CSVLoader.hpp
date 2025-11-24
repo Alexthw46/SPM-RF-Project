@@ -47,6 +47,24 @@ public:
         file.close();
         return true;
     }
+
+    // Transpose the row-major data to column-major, as a copy
+    static std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>> &X) {
+        if (X.empty()) return {};
+
+        const size_t n_samples = X.size();
+        const size_t n_features = X[0].size();
+        std::vector X_col_major(n_features, std::vector<double>(n_samples));
+
+        for (size_t i = 0; i < n_samples; ++i) {
+            for (size_t j = 0; j < n_features; ++j) {
+                X_col_major[j][i] = X[i][j];
+            }
+        }
+
+        return X_col_major;
+    }
+
 };
 
 #endif // CSVLOADER_HPP

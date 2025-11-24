@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <chrono>
 #include <iostream>
+
+#include "CSVLoader.hpp"
 using namespace std;
 constexpr bool verbose = false;
 
@@ -22,23 +24,25 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
                        const std::vector<int> &y) {
     const auto total_start = std::chrono::high_resolution_clock::now();
 
+    ColMajorView Xc = {CSVLoader::transpose(X)};
     std::vector<std::vector<size_t> > bootstrap_indices(n_trees);
+    const size_t size = X.size();
 
     // Parallel loop over trees
-#pragma omp parallel for schedule(static) default(none) shared(X,y, bootstrap_indices, verbose, cout)
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y, bootstrap_indices, verbose, cout) firstprivate(size)
     for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
         // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
         std::mt19937 rng(gen() + i);
-        std::uniform_int_distribution<size_t> dist(0, X.size() - 1);
+        std::uniform_int_distribution<size_t> dist(0, size - 1);
 
         // Bootstrap indices
-        bootstrap_indices[i].resize(X.size());
-        for (size_t j = 0; j < X.size(); ++j)
+        bootstrap_indices[i].resize(size);
+        for (size_t j = 0; j < size; ++j)
             bootstrap_indices[i][j] = dist(rng);
 
         // Fit the tree
         const auto t_start = std::chrono::high_resolution_clock::now();
-        trees[i].fit(X, y, bootstrap_indices[i]);
+        trees[i].fit(Xc, y, bootstrap_indices[i]);
         const auto t_end = std::chrono::high_resolution_clock::now();
         if (verbose)
 #pragma omp critical

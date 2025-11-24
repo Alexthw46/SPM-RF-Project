@@ -54,7 +54,7 @@ int DecisionTree::majority_label_from_counts(const unordered_map<int, int> &coun
 // Splits data based on best gini impurity of a feature, selected randomly
 // Then calls itself for left and right child nodes, until stopping criteria met
 // Measures and logs time taken for building the tree
-Node *DecisionTree::build(const vector<vector<double> > &X,
+Node *DecisionTree::build(const ColMajorView &Xc,
                           const vector<int> &y,
                           const vector<size_t> &indices,
                           const int depth) {
@@ -72,14 +72,13 @@ Node *DecisionTree::build(const vector<vector<double> > &X,
         return leaf;
     }
 
-    const size_t n_features = X[0].size();
+    const size_t n_features = Xc.data.size();
     uniform_int_distribution feature_dist(0, static_cast<int>(n_features) - 1);
 
     // Find best split
     int best_f = -1;
     double best_t = 0.0;
-    double best_score = numeric_limits<double>::infinity();
-
+    double best_score = numeric_limits<double>::max();
     const int n_try = max(1, static_cast<int>(sqrt(static_cast<double>(n_features))));
     // For each candidate feature chosen randomly
     for (int k = 0; k < n_try; ++k) {
@@ -88,7 +87,7 @@ Node *DecisionTree::build(const vector<vector<double> > &X,
         // collect (value, index) for current node only (no copying full rows)
         vector<pair<double, size_t> > vals;
         vals.reserve(indices.size());
-        for (size_t idx: indices) vals.emplace_back(X[idx][f], idx);
+        for (size_t idx: indices) vals.emplace_back(Xc(idx, f), idx);
 
         ranges::sort(vals,
                      [](const auto &a, const auto &b) { return a.first < b.first; });
@@ -143,7 +142,7 @@ Node *DecisionTree::build(const vector<vector<double> > &X,
     vector<size_t> right_idx;
     right_idx.reserve(indices.size() / 2);
     for (size_t idx: indices) {
-        if (X[idx][best_f] <= best_t) left_idx.push_back(idx);
+        if (Xc(idx, best_f) <= best_t) left_idx.push_back(idx);
         else right_idx.push_back(idx);
     }
 
@@ -161,16 +160,16 @@ Node *DecisionTree::build(const vector<vector<double> > &X,
     node->threshold = best_t;
 
     // Recursively build left and right subtrees using the partitioned indices
-    node->left = build(X, y, left_idx, depth + 1);
-    node->right = build(X, y, right_idx, depth + 1);
+    node->left = build(Xc, y, left_idx, depth + 1);
+    node->right = build(Xc, y, right_idx, depth + 1);
     return node;
 }
 
-void DecisionTree::fit(const vector<vector<double> > &X,
+void DecisionTree::fit(const ColMajorView &Xc,
                        const vector<int> &y,
                        const vector<size_t> &indices) {
-    // Start the recursive build from root
-    root = build(X, y, indices, 0);
+    // Start the recursive build from root using column-major view
+    root = build(Xc, y, indices, 0);
 }
 
 int DecisionTree::predict_one(const Node *node, const vector<double> &x) {

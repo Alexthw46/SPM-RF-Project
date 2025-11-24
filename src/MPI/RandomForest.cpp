@@ -10,6 +10,8 @@
 #include <mpi.h>
 #include <vector>
 
+#include "CSVLoader.hpp"
+
 using namespace std;
 
 constexpr bool verbose = true;
@@ -31,23 +33,25 @@ void RandomForest::fit(const vector<vector<double> > &X,
     const size_t trees_per_rank = (n_trees + n_ranks - 1) / n_ranks;
     const size_t start_tree = rank * trees_per_rank;
     const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
+    const size_t size = X.size();
+
+    ColMajorView Xc = {CSVLoader::transpose(X)};
 
     std::vector<std::vector<size_t> > bootstrap_indices(end_tree - start_tree);
-
     const auto total_start = chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(static) default(none) shared(X,y ,bootstrap_indices, verbose, rank, start_tree, end_tree, cout)
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y ,bootstrap_indices, verbose, rank, start_tree, end_tree, cout) firstprivate(size)
     for (size_t idx = start_tree; idx < end_tree; ++idx) {
         const size_t local_idx = idx - start_tree;
 
         std::mt19937 rng(gen() + idx);
-        std::uniform_int_distribution<size_t> dist(0, X.size() - 1);
+        std::uniform_int_distribution<size_t> dist(0, size - 1);
 
-        bootstrap_indices[local_idx].resize(X.size());
-        for (size_t j = 0; j < X.size(); ++j)
+        bootstrap_indices[local_idx].resize(size);
+        for (size_t j = 0; j < size; ++j)
             bootstrap_indices[local_idx][j] = dist(rng);
 
         const auto t_start = chrono::high_resolution_clock::now();
-        trees[idx].fit(X, y, bootstrap_indices[local_idx]);
+        trees[idx].fit(Xc, y, bootstrap_indices[local_idx]);
         const auto t_end = chrono::high_resolution_clock::now();
 
         if (verbose)
@@ -82,6 +86,8 @@ int RandomForest::predict(const vector<double> &x) const {
 // Batch prediction
 vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const {
     int rank, n_ranks;
+    const auto startT = chrono::high_resolution_clock::now();
+
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
 
@@ -111,6 +117,9 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
     MPI_Gatherv(local_predictions.data(), local_predictions.size(), MPI_INT,
                 predictions.data(), counts.data(), displs.data(), MPI_INT,
                 0, MPI_COMM_WORLD);
-
+    const auto endT = chrono::high_resolution_clock::now();
+    cout << "[Timing] RandomForest predict_batch() total time: "
+            << chrono::duration_cast<chrono::nanoseconds>(endT - startT).count()
+            << " ns" << endl;
     return predictions; // valid only on rank 0
 }

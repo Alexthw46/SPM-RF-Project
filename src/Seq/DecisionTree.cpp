@@ -65,7 +65,7 @@ Node* DecisionTree::build(const vector<vector<double>>& X, const vector<int>& y,
     const auto t_start = chrono::high_resolution_clock::now();
 
     // Stopping criteria
-    if (depth >= max_depth || y.size() <= min_samples || gini(y) == 0) {
+    if (depth >= max_depth || y.size() <= static_cast<size_t>(min_samples) || gini(y) == 0) {
         const auto leaf = new Node();
         leaf->is_leaf = true;
         leaf->label = majority_label(y);
