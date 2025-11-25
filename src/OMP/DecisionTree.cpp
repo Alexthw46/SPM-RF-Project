@@ -54,7 +54,8 @@ int DecisionTree::majority_label_from_counts(const unordered_map<int, int> &coun
 // Splits data based on best gini impurity of a feature, selected randomly
 // Then calls itself for left and right child nodes, until stopping criteria met
 // Measures and logs time taken for building the tree
-Node *DecisionTree::build(const ColMajorView &Xc,
+template<class View>
+Node *DecisionTree::build(const View &Xc,
                           const vector<int> &y,
                           const vector<size_t> &indices,
                           const int depth) {
@@ -165,7 +166,8 @@ Node *DecisionTree::build(const ColMajorView &Xc,
     return node;
 }
 
-void DecisionTree::fit(const ColMajorView &Xc,
+template <class View>
+void DecisionTree::fit(const View &Xc,
                        const vector<int> &y,
                        const vector<size_t> &indices) {
     // Start the recursive build from root using column-major view
@@ -182,3 +184,14 @@ int DecisionTree::predict_one(const Node *node, const vector<double> &x) {
 int DecisionTree::predict(const vector<double> &x) const {
     return predict_one(root, x);
 }
+
+template Node* DecisionTree::build<ColMajorView>(
+    const ColMajorView&,
+    const std::vector<int>&,
+    const std::vector<size_t>&,
+    int);
+
+template void DecisionTree::fit<ColMajorView>(
+    const ColMajorView&,
+    const std::vector<int>&,
+    const std::vector<size_t>&);

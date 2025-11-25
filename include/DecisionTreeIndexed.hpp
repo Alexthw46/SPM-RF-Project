@@ -25,11 +25,18 @@ struct ColMajorView {
     double operator()(const size_t i, const size_t f) const { return data[f][i]; }
 };
 
+struct RowMajorView {
+    const std::vector<std::vector<double> > &data;
+
+    double operator()(const size_t i, const size_t f) const { return data[i][f]; }
+};
+
 class DecisionTree {
 public:
     DecisionTree(int max_depth_, int min_samples_, unsigned int seed);
 
-    void fit(const ColMajorView &Xc, const std::vector<int> &y,
+    template<class View>
+    void fit(const View &Xc, const std::vector<int> &y,
              const std::vector<size_t> &indices); // build from indices
     [[nodiscard]] int predict(const std::vector<double> &x) const;
 
@@ -46,10 +53,11 @@ private:
 
     [[nodiscard]] static int majority_label_from_counts(const std::unordered_map<int, int> &counts);
 
-    Node *build(const ColMajorView &Xc,
-                              const std::vector<int> &y,
-                              const std::vector<size_t> &indices,
-                              int depth);
+    template<class View>
+    Node *build(const View &Xc,
+                const std::vector<int> &y,
+                const std::vector<size_t> &indices,
+                int depth);
 
     static int predict_one(const Node *node, const std::vector<double> &x);
 };

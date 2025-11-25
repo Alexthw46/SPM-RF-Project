@@ -166,7 +166,7 @@ Node *DecisionTree::build(const View &Xc,
     return node;
 }
 
-template <class View>
+template<class View>
 void DecisionTree::fit(const View &Xc,
                        const vector<int> &y,
                        const vector<size_t> &indices) {
@@ -185,13 +185,13 @@ int DecisionTree::predict(const vector<double> &x) const {
     return predict_one(root, x);
 }
 
-template Node* DecisionTree::build<ColMajorView>(
-    const ColMajorView&,
+template void DecisionTree::fit<RowMajorView>(
+    const RowMajorView&,
+    const std::vector<int>&,
+    const std::vector<size_t>&);
+
+template Node* DecisionTree::build<RowMajorView>(
+    const RowMajorView&,
     const std::vector<int>&,
     const std::vector<size_t>&,
     int);
-
-template void DecisionTree::fit<ColMajorView>(
-    const ColMajorView&,
-    const std::vector<int>&,
-    const std::vector<size_t>&);

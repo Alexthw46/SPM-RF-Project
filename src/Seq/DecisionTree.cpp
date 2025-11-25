@@ -78,7 +78,7 @@ Node* DecisionTree::build(const vector<vector<double>>& X, const vector<int>& y,
     // Find best split
     int best_f = -1;
     double best_t = 0;
-    double best_g = numeric_limits<double>::infinity();
+    double best_g = numeric_limits<double>::max();
 
     const int n_try = max(1, static_cast<int>(sqrt(n_features)));
     // Evaluate potential splits using random feature selection

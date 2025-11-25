@@ -52,7 +52,7 @@ int main(const int argc, char *argv[]) {
     cout << "Inferred number of classes: " << (max_label + 1) << "\n";
 
     // Create and train the random forest
-    RandomForest rf(50, 5, max_label+1);
+    RandomForest rf(100, 10, max_label+1);
     rf.fit(X, y);
 
     // Evaluate accuracy on full dataset

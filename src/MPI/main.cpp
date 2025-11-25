@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     cout << "Inferred number of classes: " << (max_label + 1) << "\n";
 
     // Create and train the random forest (MPI-aware version)
-    RandomForest rf(5, 5, max_label + 1);
+    RandomForest rf(100, 10, max_label + 1);
     rf.fit(X, y);
 
     // Evaluate accuracy (rank 0 can gather predictions)
