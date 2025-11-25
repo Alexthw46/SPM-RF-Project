@@ -385,8 +385,8 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     cout << "All trees built in parallel." << endl;
 
     cout << "[Timing] RandomForest fit() total time: "
-            << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
-            << " ns" << endl;
+            << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
+            << " ms" << endl;
 }
 
 // Predict for one sample
@@ -439,8 +439,8 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     const auto end = std::chrono::high_resolution_clock::now();
 
     std::cout << "[Timing] RandomForest predict_batch_parallel() total time: "
-            << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()
-            << " ns" << std::endl;
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+            << " ms" << std::endl;
 
     return predictions;
 }

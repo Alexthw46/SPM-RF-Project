@@ -4,15 +4,21 @@
 #include "CSVLoader.hpp"
 using namespace std;
 
-constexpr bool debug = false;
-
-int main() {
+int main(const int argc, char *argv[]) {
+    bool debug = false;
+    string csv_file = "../test/Iris.csv";
+    for (int i = 1; i < argc; ++i) {
+        if (string a = argv[i]; a == "-d" || a == "--debug") {
+            debug = true;
+        } else {
+            cout << "Using file: " << a << "\n";
+            csv_file = a;
+        }
+    }
     vector<vector<double> > X;
     vector<int> y;
 
     // Replace with path to your CSV
-    const string csv_file = "../test/Iris.csv";
-
     if (!CSVLoader::loadCSV(csv_file, X, y)) {
         cerr << "Failed to open CSV file.\n";
         return 1;
@@ -42,8 +48,12 @@ int main() {
         }
     }
 
+    // Infer number of classes from labels
+    const int max_label = *ranges::max_element(y);
+    cout << "Inferred number of classes: " << (max_label + 1) << "\n";
+
     // Create and train the random forest
-    RandomForest rf(5, 5, 3);
+    RandomForest rf(5, 5, max_label+1);
     rf.fit(X, y);
 
     // Evaluate accuracy on full dataset

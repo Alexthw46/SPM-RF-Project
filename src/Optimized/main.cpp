@@ -47,8 +47,13 @@ int main(const int argc, char *argv[]) {
         }
     }
 
+    // Infer number of classes from labels
+    const int max_label = *ranges::max_element(y);
+    cout << "Inferred number of classes: " << (max_label + 1) << "\n";
+
     // Create and train the random forest
-    RandomForest rf(5, 5, 3);
+    RandomForest rf(5, 5, max_label+1);
+
     rf.fit(X, y);
 
     // Evaluate accuracy on full dataset

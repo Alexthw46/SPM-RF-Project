@@ -67,8 +67,8 @@ void RandomForest::fit(const vector<vector<double> > &X,
 
     if (rank == 0)
         cout << "[Timing] RandomForest MPI fit() total time: "
-                << chrono::duration_cast<chrono::nanoseconds>(total_end - total_start).count()
-                << " ns\n";
+                << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
+                << " ms\n";
 }
 
 // Predict for one sample
@@ -119,7 +119,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
                 0, MPI_COMM_WORLD);
     const auto endT = chrono::high_resolution_clock::now();
     cout << "[Timing] RandomForest predict_batch() total time: "
-            << chrono::duration_cast<chrono::nanoseconds>(endT - startT).count()
-            << " ns" << endl;
+            << chrono::duration_cast<chrono::milliseconds>(endT - startT).count()
+            << " ms" << endl;
     return predictions; // valid only on rank 0
 }
