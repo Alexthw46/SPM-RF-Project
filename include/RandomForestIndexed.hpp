@@ -26,21 +26,21 @@ public:
      * @param X Feature matrix where each inner vector is a sample.
      * @param y Corresponding class labels for each sample in X.
      */
-    void fit(const std::vector<std::vector<double>>& X, const std::vector<int>& y);
+    void fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y);
 
     /**
      * @brief Predict the class label for a single sample.
      * @param x Feature vector of the sample to predict.
      * @return Predicted class label.
      */
-    [[nodiscard]] int predict(const std::vector<double>& x) const;
+    [[nodiscard]] int predict(const std::vector<double> &x) const;
 
     /**
      * @brief Predict class labels for a batch of samples.
      * @param X Feature matrix where each inner vector is a sample.
      * @return Vector of predicted class labels for each sample.
      */
-    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double>> &X) const;
+    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X) const;
 
 private:
     /** @brief Number of trees in the ensemble. */

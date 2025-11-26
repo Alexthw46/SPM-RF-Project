@@ -24,7 +24,13 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
                        const std::vector<int> &y) {
     const auto total_start = std::chrono::high_resolution_clock::now();
 
-    ColMajorView Xc = {CSVLoader::transpose(X)};
+    // Flat ver
+    // Create a flat column-major array from the row-major data
+    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+
+    // Construct the flat column-major view
+    const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
+
     std::vector<std::vector<size_t> > bootstrap_indices(n_trees);
     const size_t size = X.size();
 

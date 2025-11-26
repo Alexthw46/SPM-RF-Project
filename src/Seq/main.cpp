@@ -7,9 +7,16 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
+    int n_trees = 5;    // preserve original Seq default
+    int max_depth = 5;  // preserve original Seq default
+
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
+        } else if (a == "-t" || a == "--trees") {
+            if (i + 1 < argc) { n_trees = stoi(argv[++i]); }
+        } else if (a == "-m" || a == "--max-depth") {
+            if (i + 1 < argc) { max_depth = stoi(argv[++i]); }
         } else {
             cout << "Using file: " << a << "\n";
             csv_file = a;
@@ -53,7 +60,7 @@ int main(const int argc, char *argv[]) {
     cout << "Inferred number of classes: " << (max_label + 1) << "\n";
 
     // Create and train the random forest
-    RandomForest rf(5, 5, max_label+1);
+    RandomForest rf(n_trees, max_depth, max_label+1);
     rf.fit(X, y);
 
     // Evaluate accuracy on full dataset

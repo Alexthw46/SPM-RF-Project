@@ -36,26 +36,26 @@ add_executable(RandomForestIndexed
 
 add_executable(RandomForestOptimized
         src/Optimized/main.cpp
-        src/Optimized/DecisionTree.cpp
+        src/Common/DecisionTree.cpp
         src/Optimized/RandomForest.cpp
 )
 
 add_executable(RandomForestFF
         src/FF/main.cpp
-        src/FF/DecisionTree.cpp
         src/FF/RandomForest.cpp
+        src/Common/DecisionTree.cpp
 )
 
 add_executable(RandomForestOMP
         src/OMP/main.cpp
-        src/OMP/DecisionTree.cpp
         src/OMP/RandomForest.cpp
+        src/Common/DecisionTree.cpp
 )
 
 add_executable(RandomForestMPI
         src/MPI/main.cpp
-        src/MPI/DecisionTree.cpp
         src/MPI/RandomForest.cpp
+        src/Common/DecisionTree.cpp
 )
 
 target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)

@@ -10,7 +10,7 @@
 class CSVLoader {
 public:
     // Load CSV in X (features) e y (String labels mapped to int)
-    static bool loadCSV(const std::string &filename, std::vector<std::vector<double>> &X, std::vector<int> &y) {
+    static bool loadCSV(const std::string &filename, std::vector<std::vector<double> > &X, std::vector<int> &y) {
         std::ifstream file(filename);
         if (!file.is_open()) return false;
 
@@ -38,7 +38,7 @@ public:
             }
             int label = label_map[str_label];
 
-            for (const auto &t : tokens) features.push_back(std::stod(t));
+            for (const auto &t: tokens) features.push_back(std::stod(t));
 
             X.push_back(features);
             y.push_back(label);
@@ -49,7 +49,7 @@ public:
     }
 
     // Transpose the row-major data to column-major, as a copy
-    static std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>> &X) {
+    static std::vector<std::vector<double> > transpose(const std::vector<std::vector<double> > &X) {
         if (X.empty()) return {};
 
         const size_t n_samples = X.size();
@@ -65,7 +65,22 @@ public:
         return X_col_major;
     }
 
+    // Transpose the row-major data to column-major, as a flat vector
+    static std::vector<double> transpose_flat(const std::vector<std::vector<double> > &X) {
+        if (X.empty()) return {};
+
+        const size_t n_samples = X.size();
+        const size_t n_features = X[0].size();
+        std::vector<double> X_col_major(n_samples * n_features);
+
+        for (size_t i = 0; i < n_samples; ++i) {
+            for (size_t j = 0; j < n_features; ++j) {
+                X_col_major[j * n_samples + i] = X[i][j]; // column-major layout
+            }
+        }
+
+        return X_col_major;
+    }
 };
 
 #endif // CSVLOADER_HPP
-

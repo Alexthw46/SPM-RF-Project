@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <ranges>
 #include "DecisionTreeIndexed.hpp"
 
@@ -73,7 +74,8 @@ Node *DecisionTree::build(const View &Xc,
         return leaf;
     }
 
-    const size_t n_features = Xc.data.size();
+    //Flat ver
+    const size_t n_features = Xc.n_features;
     uniform_int_distribution feature_dist(0, static_cast<int>(n_features) - 1);
 
     // Find best split
@@ -166,32 +168,37 @@ Node *DecisionTree::build(const View &Xc,
     return node;
 }
 
-template <class View>
-void DecisionTree::fit(const View &Xc,
-                       const vector<int> &y,
-                       const vector<size_t> &indices) {
-    // Start the recursive build from root using column-major view
-    root = build(Xc, y, indices, 0);
-}
-
 int DecisionTree::predict_one(const Node *node, const vector<double> &x) {
+    if (!node) {
+        std::cerr << "ERROR: predict_one called with null node!" << std::endl;
+        return -1; // or throw
+    }
     // Base case: leaf node -> return label
     if (node->is_leaf) return node->label;
     // Recursive case: traverse left or right child based on feature threshold
     return predict_one(x[node->feature] <= node->threshold ? node->left : node->right, x);
 }
 
-int DecisionTree::predict(const vector<double> &x) const {
-    return predict_one(root, x);
+int DecisionTree::predict_flat(const std::vector<double> &x) const {
+    int idx = 0;
+    for (;;) {
+        const auto &[is_leaf, feature, threshold, label, right] = flat[idx];
+        if (is_leaf)
+            return label;
+
+        idx = x[feature] <= threshold
+                  ? idx + 1 // left child is always next
+                  : right; // precomputed right child index
+    }
 }
 
-template Node* DecisionTree::build<ColMajorView>(
-    const ColMajorView&,
-    const std::vector<int>&,
-    const std::vector<size_t>&,
+template Node *DecisionTree::build<ColMajorViewFlat>(
+    const ColMajorViewFlat &,
+    const std::vector<int> &,
+    const std::vector<size_t> &,
     int);
 
-template void DecisionTree::fit<ColMajorView>(
-    const ColMajorView&,
-    const std::vector<int>&,
-    const std::vector<size_t>&);
+template void DecisionTree::fit<ColMajorViewFlat>(
+    const ColMajorViewFlat &,
+    const std::vector<int> &,
+    const std::vector<size_t> &);

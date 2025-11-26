@@ -41,7 +41,7 @@ struct TreeTask {
     std::vector<size_t> &bootstrap_idx;
 
     /// Read-only feature matrix (rows = samples).
-    const ColMajorView &X;
+    const ColMajorViewFlat &X;
 
     /// Read-only label vector (one label per sample).
     const std::vector<int> &y;
@@ -190,7 +190,7 @@ public:
 class TreeBuildEmitter final : public ff_node {
 public:
     /// Read-only reference to feature matrix.
-    const ColMajorView &X;
+    const ColMajorViewFlat &X;
     /// Read-only reference to labels.
     const std::vector<int> &y;
     /// Reference to the vector of DecisionTree instances to be trained.
@@ -213,7 +213,7 @@ public:
      */
     TreeBuildEmitter(std::vector<DecisionTree> &t,
                      std::vector<std::vector<size_t> > &idx,
-                     const ColMajorView &X_,
+                     const ColMajorViewFlat &X_,
                      const std::vector<int> &y_)
         : X(X_), y(y_), trees(t), bootstrap_indices_per_tree(idx) {
         tasks.reserve(trees.size());
@@ -375,7 +375,12 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     vector<ff_node *> workers(ff_numCores());
     ranges::generate(workers, [] { return new TreeWorker(); });
 
-    ColMajorView Xc = {CSVLoader::transpose(X)};
+    // Flat ver
+    // Create a flat column-major array from the row-major data
+    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+
+    // Construct the flat column-major view
+    const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
     ff_farm farm(workers);
     farm.add_emitter(new TreeBuildEmitter(trees, bootstrap_indices_per_tree, Xc, y));

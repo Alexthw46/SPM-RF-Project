@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <iostream>
-
+#include <omp.h>
 #include <mpi.h>
 #include <vector>
 
@@ -35,11 +35,17 @@ void RandomForest::fit(const vector<vector<double> > &X,
     const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
     const size_t size = X.size();
 
-    ColMajorView Xc = {CSVLoader::transpose(X)};
+    // Flat ver
+    // Create a flat column-major array from the row-major data
+    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+
+    // Construct the flat column-major view
+    const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
     std::vector<std::vector<size_t> > bootstrap_indices(end_tree - start_tree);
     const auto total_start = chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(static) default(none) shared(Xc,y ,bootstrap_indices, verbose, rank, start_tree, end_tree, cout) firstprivate(size)
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y ,bootstrap_indices, verbose, rank, start_tree, \
+    end_tree, cout) firstprivate(size)
     for (size_t idx = start_tree; idx < end_tree; ++idx) {
         const size_t local_idx = idx - start_tree;
 
@@ -76,6 +82,8 @@ int RandomForest::predict(const vector<double> &x) const {
     unordered_map<int, int> vote_count;
     // Collect votes from each tree
     for (const auto &t: trees) {
+        if (!t.root)
+            continue;
         int p = t.predict(x);
         vote_count[p]++;
     } // Return label with most votes

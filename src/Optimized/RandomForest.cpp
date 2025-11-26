@@ -10,6 +10,8 @@
 #include "CSVLoader.hpp"
 using namespace std;
 
+constexpr bool debug = true;
+
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
@@ -22,12 +24,15 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
 void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     const auto total_start = chrono::high_resolution_clock::now();
 
-
     // Distribution to use for bootstrap sampling
     uniform_int_distribution<size_t> dist(0, X.size() - 1);
 
-    // Transpose the sample-feature matrix once
-    const ColMajorView Xc = {CSVLoader::transpose(X)};
+    // Flat ver
+    // Create a flat column-major array from the row-major data
+    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+
+    // Construct the flat column-major view
+    const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
     // Fit each tree on a bootstrap sample
     for (size_t i = 0; i < trees.size(); i++) {
@@ -45,9 +50,10 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
         t.fit(Xc, y, bootstrap_idx);
         const auto t_end = chrono::high_resolution_clock::now();
 
-        cout << "[Timing] Tree " << i << " trained in "
-                << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
-                << " ns" << endl;
+        if (debug)
+            cout << "[Timing] Tree " << i << " trained in "
+                    << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
+                    << " ns" << endl;
     }
     cout << "All trees built Sequentially." << endl;
 

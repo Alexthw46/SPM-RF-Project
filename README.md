@@ -4,7 +4,7 @@ Implementations of a **Parallel Random Forest** in C++ for my Parallel and
 Distributed Systems course.
 
 | Version      | Multi-Thread | Multi-Node |
-| ------------ | ------------ | ---------- |
+|--------------|--------------|------------|
 | Sequential   | No           | No         |
 | OpenMP       | Yes          | No         |
 | FastFlow     | Yes          | No         |
