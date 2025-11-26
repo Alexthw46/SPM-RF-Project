@@ -1,4 +1,4 @@
-#include "RandomForest.hpp"
+#include "RandomForestNaive.hpp"
 #include "DecisionTree.hpp"
 
 #include <algorithm>

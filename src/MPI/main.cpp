@@ -2,7 +2,7 @@
 #include <iostream>
 #include <mpi.h>
 #include "CSVLoader.hpp"
-#include "RandomForest.hpp"
+#include "RandomForestIndexed.hpp"
 
 using namespace std;
 

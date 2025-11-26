@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 #include <iostream>
-#include "RandomForest.hpp"
+#include "RandomForestIndexed.hpp"
 #include "CSVLoader.hpp"
 using namespace std;
 
