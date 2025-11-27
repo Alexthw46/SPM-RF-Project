@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <mpi.h>
 #include <vector>
 #include <random>
 #include "DecisionTreeIndexed.hpp"
@@ -42,7 +44,12 @@ public:
      */
     [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X) const;
 
-private:
+    [[nodiscard]] bool is_full_and_flat() const {
+        return std::ranges::all_of(trees, [](const DecisionTree &tree) {
+            return tree.root != nullptr && tree.hasFlat();
+        });
+    }
+protected:
     /** @brief Number of trees in the ensemble. */
     int n_trees;
     /** @brief Maximum allowed depth for each decision tree. */
@@ -54,3 +61,11 @@ private:
     /** @brief Mersenne Twister random number generator used for sampling. */
     std::mt19937 gen;
 };
+
+class RandomForestReplicated : public RandomForest {
+public:
+    using RandomForest::RandomForest;
+
+    void gather_all_trees(MPI_Comm comm = MPI_COMM_WORLD);
+};
+

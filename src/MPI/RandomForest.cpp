@@ -131,3 +131,9 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
             << " ms" << endl;
     return predictions; // valid only on rank 0
 }
+
+void RandomForestReplicated::gather_all_trees(MPI_Comm comm) {
+    int rank, n_ranks;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &n_ranks);
+}

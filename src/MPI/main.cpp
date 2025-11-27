@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include "CSVLoader.hpp"
 #include "RandomForestIndexed.hpp"
+#include "TrainTestSplit.hpp"
 
 using namespace std;
 
@@ -79,22 +80,63 @@ int main(int argc, char *argv[]) {
     const int max_label = *ranges::max_element(y);
     if (rank == 0) cout << "Inferred number of classes: " << (max_label + 1) << "\n";
 
-    // Create and train the random forest (MPI-aware version)
-    RandomForest rf(n_trees, max_depth, max_label + 1, 0);
-    rf.fit(X, y);
-
-    if (rank == 0) cout << "Training completed.\n";
-    // Evaluate accuracy (rank 0 can gather predictions)
-    std::vector<int> predictions;
-    if (rank == 0)
-        predictions = rf.predict_batch(X); // returns only on rank 0
+    // Train-test split (80% train, 20% test)
+    vector<size_t> train_indices, test_indices;
+    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices);
 
     if (rank == 0) {
-        int correct = 0;
-        for (size_t i = 0; i < predictions.size() && i < y.size(); ++i)
-            if (predictions[i] == y[i]) ++correct;
+        cout << "Train samples: " << train_indices.size()
+             << ", Test samples: " << test_indices.size() << "\n";
+    }
 
-        cout << "Accuracy: " << static_cast<double>(correct) / static_cast<double>(X.size()) << endl;
+    // Create training subsets
+    const auto X_train = TrainTestSplit::subset_X(X, train_indices);
+    const auto y_train = TrainTestSplit::subset_y(y, train_indices);
+
+    // Create test subsets
+    const auto X_test = TrainTestSplit::subset_X(X, test_indices);
+    const auto y_test = TrainTestSplit::subset_y(y, test_indices);
+
+    // Create and train the random forest for this MPI process
+    RandomForestReplicated rf(n_trees, max_depth, max_label + 1);
+
+    // Train the trees assigned to this rank
+    rf.fit(X_train, y_train);
+
+    cout << "Training completed on rank " << rank << ".\n";
+
+    if (rank == 0) {
+        cout << "Gathering trees from all ranks...\n";
+    }
+
+    // Broadcast trained trees to all ranks via MPI
+    rf.gather_all_trees(MPI_COMM_WORLD);
+
+    // Check if all trees are gathered (only rank 0)
+    if (rank == 4) {
+        if (rf.is_full_and_flat()) {
+            cout << "All trees gathered successfully across MPI ranks.\n";
+        } else {
+            cout << "Error: Not all trees were gathered correctly.\n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+            return 1;
+        }
+    }
+
+    if (rank == 0) cout << "Training completed.\n";
+
+    // Evaluate accuracy on training set (rank 0)
+    const std::vector<int> train_predictions = rf.predict_batch(X_train);
+    if (rank == 0) {
+        const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
+        cout << "Training Accuracy: " << train_accuracy << endl;
+    }
+
+    // Evaluate accuracy on test set (rank 0)
+    const std::vector<int> test_predictions = rf.predict_batch(X_test);
+    if (rank == 0) {
+        const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
+        cout << "Test Accuracy: " << test_accuracy << endl;
     }
 
     // Finalize MPI

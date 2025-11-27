@@ -83,6 +83,11 @@ public:
         has_flat = true;
     }
 
+    void set_flat(std::vector<FlatNode> &&flat_tree) {
+        flat = std::move(flat_tree);
+        has_flat = true;
+    }
+
     static int predict_one(const Node *node, const std::vector<double> &x);
 
     [[nodiscard]] int predict_flat(const std::vector<double> &x) const;
@@ -140,6 +145,14 @@ public:
 
         right = right_idx;
         return me;
+    }
+
+    [[nodiscard]] std::vector<FlatNode> getFlat() const {
+        return flat;
+    }
+
+    [[nodiscard]] bool hasFlat() const {
+        return has_flat;
     }
 
 private:

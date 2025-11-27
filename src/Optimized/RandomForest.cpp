@@ -10,7 +10,7 @@
 #include "CSVLoader.hpp"
 using namespace std;
 
-constexpr bool debug = true;
+constexpr bool debug = false;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
