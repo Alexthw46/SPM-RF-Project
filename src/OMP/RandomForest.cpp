@@ -35,7 +35,7 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
     const size_t size = X.size();
 
     // Parallel loop over trees
-#pragma omp parallel for schedule(static) default(none) shared(Xc,y, bootstrap_indices, verbose, cout) firstprivate(size)
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y, bootstrap_indices, verbose, cout, size)
     for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
         // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
         std::mt19937 rng(gen() + i);

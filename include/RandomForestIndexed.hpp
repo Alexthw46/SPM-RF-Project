@@ -46,9 +46,14 @@ public:
 
     [[nodiscard]] bool is_full_and_flat() const {
         return std::ranges::all_of(trees, [](const DecisionTree &tree) {
-            return tree.root != nullptr && tree.hasFlat();
+            return tree.hasFlat() && !tree.getFlat().empty();
         });
     }
+
+    [[nodiscard]] std::vector<DecisionTree> getForest() const {
+        return trees;
+    }
+
 protected:
     /** @brief Number of trees in the ensemble. */
     int n_trees;
@@ -62,10 +67,13 @@ protected:
     std::mt19937 gen;
 };
 
-class RandomForestReplicated : public RandomForest {
+class RandomForestDistributed : public RandomForest {
 public:
     using RandomForest::RandomForest;
 
-    void gather_all_trees(MPI_Comm comm = MPI_COMM_WORLD);
+    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X, bool distributionStrat) const;
+
+
+    void gather_all_trees(MPI_Comm comm);
 };
 

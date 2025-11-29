@@ -173,7 +173,7 @@ int DecisionTree::predict_flat(const std::vector<double> &x) const {
         if (is_leaf)
             return label;
 
-        idx = (x[feature] <= threshold)
+        idx = x[feature] <= threshold
                   ? idx + 1 // left child is always next
                   : right; // precomputed right child index
     }

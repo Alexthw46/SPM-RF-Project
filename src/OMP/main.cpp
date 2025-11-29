@@ -13,8 +13,7 @@ int main(const int argc, char *argv[]) {
     int max_depth = 10;   // default preserved from original code
 
     for (int i = 1; i < argc; ++i) {
-        string a = argv[i];
-        if (a == "-d" || a == "--debug") {
+        if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
         } else if (a == "-t" || a == "--trees") {
             if (i + 1 < argc) { n_trees = stoi(argv[++i]); }
@@ -67,12 +66,12 @@ int main(const int argc, char *argv[]) {
          << ", Test samples: " << test_indices.size() << "\n";
 
     // Create training subsets
-    auto X_train = TrainTestSplit::subset_X(X, train_indices);
-    auto y_train = TrainTestSplit::subset_y(y, train_indices);
+    const auto X_train = TrainTestSplit::subset_X(X, train_indices);
+    const auto y_train = TrainTestSplit::subset_y(y, train_indices);
 
     // Create test subsets
-    auto X_test = TrainTestSplit::subset_X(X, test_indices);
-    auto y_test = TrainTestSplit::subset_y(y, test_indices);
+    const auto X_test = TrainTestSplit::subset_X(X, test_indices);
+    const auto y_test = TrainTestSplit::subset_y(y, test_indices);
 
     cout << "OpenMP variant using: " << omp_get_max_threads() << " devices\n";
 
@@ -82,11 +81,11 @@ int main(const int argc, char *argv[]) {
 
     // Evaluate accuracy on training set
     const auto train_predictions = rf.predict_batch(X_train);
-    double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
+    const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
     cout << "Training Accuracy: " << train_accuracy << endl;
 
     // Evaluate accuracy on test set
     const auto test_predictions = rf.predict_batch(X_test);
-    double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
+    const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
     cout << "Test Accuracy: " << test_accuracy << endl;
 }

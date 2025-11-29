@@ -13,8 +13,7 @@ int main(const int argc, char *argv[]) {
     int max_depth = 10;   // default preserved from original code
 
     for (int i = 1; i < argc; ++i) {
-        string a = argv[i];
-        if (a == "-d" || a == "--debug") {
+        if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
         } else if (a == "-t" || a == "--trees") {
             if (i + 1 < argc) { n_trees = stoi(argv[++i]); }

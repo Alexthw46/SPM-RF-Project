@@ -88,6 +88,13 @@ public:
         has_flat = true;
     }
 
+    static size_t hash_tree(const std::vector<FlatNode> &flatTree) {
+        size_t h = 0;
+        for (const auto &n : flatTree)
+            h ^= FlatNode::hashNode(n) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+
     static int predict_one(const Node *node, const std::vector<double> &x);
 
     [[nodiscard]] int predict_flat(const std::vector<double> &x) const;
@@ -123,7 +130,7 @@ public:
      * @return The index within \p out where the current node's \c FlatNode was stored.
      */
     static int dfs_flat(const Node *node, std::vector<FlatNode> &out) {
-        const int me = out.size();
+        const int me = static_cast<int>(out.size());
         out.emplace_back();
 
         auto &[is_leaf, feature, threshold, label, right] = out.back();

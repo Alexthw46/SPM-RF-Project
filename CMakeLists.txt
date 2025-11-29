@@ -58,6 +58,13 @@ add_executable(RandomForestMPI
         src/Common/DecisionTree.cpp
 )
 
+add_executable(UnzipCovertype
+        test/CovertypeToCvs.cpp
+)
+
 target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)
 
-target_link_libraries(RandomForestMPI PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX)
+target_link_libraries(RandomForestMPI PUBLIC MPI::MPI_CXX OpenMP::OpenMP_CXX)
+
+find_package(ZLIB REQUIRED)
+target_link_libraries(UnzipCovertype PUBLIC ZLIB::ZLIB)

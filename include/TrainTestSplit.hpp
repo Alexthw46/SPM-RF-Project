@@ -40,8 +40,8 @@ public:
         }
 
         // Calculate split point
-        const size_t test_count = static_cast<size_t>(n_samples * test_size);
-        const size_t train_count = n_samples - test_count;
+        const auto test_count = static_cast<size_t>(static_cast<double>(n_samples) * test_size);
+        const auto train_count = static_cast<long>(n_samples - test_count);
 
         // Split indices
         train_indices.assign(indices.begin(), indices.begin() + train_count);
