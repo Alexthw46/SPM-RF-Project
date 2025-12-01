@@ -9,9 +9,9 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
-    int n_trees = 100;    // default preserved from original code
-    int max_depth = 10;   // default preserved from original code
-
+    int n_trees = 100; // default value
+    int max_depth = 10; // default value
+    int global_seed = 42; // default value
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
@@ -19,6 +19,8 @@ int main(const int argc, char *argv[]) {
             if (i + 1 < argc) { n_trees = stoi(argv[++i]); }
         } else if (a == "-m" || a == "--max-depth") {
             if (i + 1 < argc) { max_depth = stoi(argv[++i]); }
+        } else if (a == "-s" || a == "--seed") {
+            if (i + 1 < argc) global_seed = stoi(argv[++i]);
         } else {
             csv_file = a;
         }
@@ -60,10 +62,10 @@ int main(const int argc, char *argv[]) {
 
     // Train-test split (80% train, 20% test)
     vector<size_t> train_indices, test_indices;
-    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices);
+    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices, global_seed);
 
     cout << "Train samples: " << train_indices.size()
-         << ", Test samples: " << test_indices.size() << "\n";
+            << ", Test samples: " << test_indices.size() << "\n";
 
     // Create training subsets
     const auto X_train = TrainTestSplit::subset_X(X, train_indices);
@@ -76,7 +78,7 @@ int main(const int argc, char *argv[]) {
     cout << "OpenMP variant using: " << omp_get_max_threads() << " devices\n";
 
     // Create and train the random forest
-    RandomForest rf(n_trees, max_depth, max_label + 1);
+    RandomForest rf(n_trees, max_depth, max_label + 1, global_seed);
     rf.fit(X_train, y_train);
 
     // Evaluate accuracy on training set

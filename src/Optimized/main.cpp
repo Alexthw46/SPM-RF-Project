@@ -9,8 +9,8 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
-    int n_trees = 100;    // default preserved from original code
-    int max_depth = 10;   // default preserved from original code
+    int n_trees = 100;    // default value
+    int max_depth = 10;   // default value
 
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {

@@ -9,9 +9,9 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
-    int n_trees = 100;    // default preserved from original code
-    int max_depth = 10;   // default preserved from original code
-
+    int n_trees = 100;    // default value
+    int max_depth = 10;   // default value
+    int seed = 42;        // default value
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
@@ -19,6 +19,8 @@ int main(const int argc, char *argv[]) {
             if (i + 1 < argc) { n_trees = stoi(argv[++i]); }
         } else if (a == "-m" || a == "--max-depth") {
             if (i + 1 < argc) { max_depth = stoi(argv[++i]); }
+        } else if (a == "-s" || a == "--seed") {
+            if (i + 1 < argc) seed = stoi(argv[++i]);
         } else {
             csv_file = a;
         }
@@ -61,7 +63,7 @@ int main(const int argc, char *argv[]) {
 
     // Train-test split (80% train, 20% test)
     vector<size_t> train_indices, test_indices;
-    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices);
+    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices, seed);
 
     cout << "Train samples: " << train_indices.size()
          << ", Test samples: " << test_indices.size() << "\n";
@@ -75,7 +77,7 @@ int main(const int argc, char *argv[]) {
     const auto y_test = TrainTestSplit::subset_y(y, test_indices);
 
     // Create and train the random forest
-    RandomForest rf(n_trees, max_depth, max_label+1);
+    RandomForest rf(n_trees, max_depth, max_label+1, seed);
     rf.fit(X_train, y_train);
 
     // Evaluate accuracy on training set

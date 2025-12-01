@@ -42,22 +42,20 @@ void RandomForest::fit(const vector<vector<double> > &X,
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
-    std::vector<std::vector<size_t> > bootstrap_indices(end_tree - start_tree);
     const auto total_start = chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(static) default(none) shared(Xc, trees, y, bootstrap_indices, start_tree, end_tree,\
+#pragma omp parallel for schedule(static) default(none) shared(Xc, trees, y, start_tree, end_tree,\
     size, rank, cout)
     for (size_t idx = start_tree; idx < end_tree; ++idx) {
-        const size_t local_idx = idx - start_tree;
 
         std::mt19937 rng(gen() + idx);
         std::uniform_int_distribution<size_t> dist(0, size - 1);
 
-        bootstrap_indices[local_idx].resize(size);
+        std::vector<size_t> bootstrap_indices(size);
         for (size_t j = 0; j < size; ++j)
-            bootstrap_indices[local_idx][j] = dist(rng);
+            bootstrap_indices[j] = dist(rng);
 
         const auto t_start = chrono::high_resolution_clock::now();
-        trees[idx].fit(Xc, y, bootstrap_indices[local_idx]);
+        trees[idx].fit(Xc, y, bootstrap_indices);
         const auto t_end = chrono::high_resolution_clock::now();
 
         if (verbose)

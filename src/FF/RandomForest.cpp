@@ -26,26 +26,13 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
         trees.emplace_back(max_depth, min_samples, seed + i); // each tree gets unique deterministic seed
 }
 
-// Create bootstrap sample indices for a single tree.
-inline void create_bootstrap_indexes(
-    const std::vector<std::vector<double> > &X,
-    std::uniform_int_distribution<size_t> &dist,
-    std::mt19937 &rng,
-    std::vector<size_t> &bootstrap_idx) {
-    const size_t n = X.size();
-    bootstrap_idx.resize(n);
-
-    for (size_t i = 0; i < n; i++)
-        bootstrap_idx[i] = dist(rng);
-}
-
-// Train forest with bootstrap sampling (index-based, no copies)
 // FastFlow version
-void RandomForest::fit(const vector<vector<double>> &X, const vector<int> &y) {
+void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     ssize_t n_workers = ff_numCores();
     // Define workers
     vector<ff_node *> workers(n_workers);
-    ranges::generate(workers, [] { return new TreeWorker2(); });
+
+    ranges::generate(workers, [] { return new TreeWorker(); });
 
     // Create a flat column-major array from the row-major data
     std::vector<double> X_flat = CSVLoader::transpose_flat(X);
@@ -53,11 +40,13 @@ void RandomForest::fit(const vector<vector<double>> &X, const vector<int> &y) {
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
-    uint64_t seed_base = gen();
-
     // Setup Farm with Emitter
     ff_farm farm(workers);
-    farm.add_emitter(new TreeBuildEmitter2(trees, Xc, y, n_workers, seed_base));
+
+    // Use explicit mapping for pinning
+    farm.no_mapping();
+
+    farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, gen));
 
     // Run farm and time it
     const auto total_start = chrono::high_resolution_clock::now();
@@ -86,21 +75,27 @@ int RandomForest::predict(const vector<double> &x) const {
 std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<double> > &X) const {
     std::vector<int> predictions(X.size());
     const size_t nCores = ff_numCores();
-
+    size_t chunk_size = (X.size() + nCores - 1) / nCores; // ceiling division
+    // Avoid chunks too small
+    if (chunk_size < 50)
+        chunk_size = 50;
+    cout << "Predicting " << X.size() << " samples using " << nCores
+            << " cores with chunk size " << chunk_size << "." << endl;
     // Define Workers
     std::vector<ff_node *> workers(nCores);
     ranges::generate(workers, [] { return new PredictWorker(); });
 
     // Setup Farm with Emitter
     ff_farm farm(workers);
-    farm.add_emitter(new PredictEmitter(*this, X, predictions, 50));
+    farm.no_mapping();
+    farm.add_emitter(new PredictEmitter(*this, X, predictions, chunk_size));
 
     // Run farm and time it
     const auto start = std::chrono::high_resolution_clock::now();
     farm.run_and_wait_end();
     const auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << "[Timing] RandomForest predict_batch_parallel() total time: "
+    std::cout << "[Timing] RandomForest predict_batch() total time: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
             << " ms" << std::endl;
 
