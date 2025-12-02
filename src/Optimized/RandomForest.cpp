@@ -17,7 +17,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, 2, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)

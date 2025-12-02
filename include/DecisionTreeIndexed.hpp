@@ -4,6 +4,34 @@
 #include <unordered_map>
 #include "Node.hpp"
 
+/**
+ * @brief Lightweight view wrapper for pre-sorted data.
+ *
+ * Provides read-only access to a 2D dataset where each feature's samples
+ * are pre-sorted. This allows efficient access to sorted values without
+ * modifying the original dataset.
+ *
+ * @tparam ViewType The type of the underlying dataset view (e.g., row-major or column-major).
+ */
+template<typename ViewType>
+struct PreSortedView {
+    const ViewType &Xc;  // original dataset
+    const std::vector<std::vector<size_t>> &sorted_idx;
+
+    size_t n_samples;
+    size_t n_features;
+
+    // Access the value at the k-th sorted sample for feature f
+    double operator()(const size_t rank_in_sorted, size_t f) const {
+        size_t i = sorted_idx[f][rank_in_sorted];
+        return Xc(i, f);
+    }
+
+    // Optionally expose the actual sample index
+    size_t index(const size_t rank_in_sorted, size_t f) const {
+        return sorted_idx[f][rank_in_sorted];
+    }
+};
 
 /**
  * @brief Lightweight view wrapper for column-major data stored in a flat array.
@@ -62,7 +90,7 @@ struct RowMajorView {
 
 class DecisionTree {
 public:
-    DecisionTree(int max_depth_, int min_samples_, unsigned int seed);
+    DecisionTree(int max_depth_, int min_samples_, int n_classes, unsigned int seed);
 
     template<class View>
     void fit(const View &Xc,
@@ -90,7 +118,7 @@ public:
 
     static size_t hash_tree(const std::vector<FlatNode> &flatTree) {
         size_t h = 0;
-        for (const auto &n : flatTree)
+        for (const auto &n: flatTree)
             h ^= FlatNode::hashNode(n) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
@@ -133,7 +161,7 @@ public:
         const int me = static_cast<int>(out.size());
         out.emplace_back();
 
-        auto &[is_leaf, feature, threshold, label, right] = out.back();
+        auto &[threshold, feature, label, right, is_leaf] = out.back();
         is_leaf = node->is_leaf;
         feature = node->feature;
         threshold = node->threshold;
@@ -165,17 +193,48 @@ public:
 private:
     int max_depth;
     int min_samples;
+    int n_classes;
     std::mt19937 gen;
 
     // Flat representation
     std::vector<FlatNode> flat;
     bool has_flat = false;
 
-    [[nodiscard]] static double gini_from_counts(const std::unordered_map<int, int> &counts, size_t n_features);
+    // Gini impurity of labels y
+    [[nodiscard]] double gini(const std::vector<int> &y) const {
+        if (y.empty()) return 0.0;
+        // Count class occurrences
+        std::vector<int> counts(n_classes);
+        for (const int c: y) counts[c]++;
+        return gini_from_counts(counts, y.size());
+    }
 
-    [[nodiscard]] static double gini(const std::vector<int> &y);
+    // Gini impurity from pre-computed class counts
+    static double gini_from_counts(const std::vector<int> &counts, const size_t n_samples) {
+        if (n_samples == 0) return 0.0;
+        double sum = 0.0;
+        // Sum of squared class probabilities
+        for (const int c : counts) {
+            // Cast to double to avoid integer division
+            const double p = static_cast<double>(c) / static_cast<double>(n_samples);
+            sum += p * p;
+        }
+        return 1.0 - sum;
+    }
 
-    [[nodiscard]] static int majority_label_from_counts(const std::unordered_map<int, int> &counts);
+    // Chooses the majority label
+    // Count occurrences are pre-computed
+    static int majority_label_from_counts(const std::vector<int> &counts) {
+        int best_label = 0;
+        int best_count = -1;
+        for (int label = 0; label < static_cast<int>(counts.size()); ++label) {
+            if (counts[label] > best_count) {
+                best_count = counts[label];
+                best_label = label;
+            }
+        }
+        return best_label;
+    }
 
     template<class View>
     Node *build(const View &Xc,

@@ -21,7 +21,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, 2, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 void RandomForest::fit(const vector<vector<double> > &X,
@@ -125,12 +125,12 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
 
     // Prepare counts and displacements
     vector<int> counts(n_ranks);
-    vector<int> displs(n_ranks);
+    vector<int> displacements(n_ranks);
     for (int r = 0; r < n_ranks; ++r) {
         const size_t s = static_cast<size_t>(r) * chunk_size;
         const size_t e = min(s + chunk_size, N);
         counts[r] = static_cast<int>(e - s);
-        displs[r] = static_cast<int>(s);
+        displacements[r] = static_cast<int>(s);
     }
 
     // Gather predictions to rank 0
@@ -139,7 +139,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
         predictions.resize(N);
 
     MPI_Gatherv(local_predictions.data(), static_cast<int>(local_predictions.size()), MPI_INT,
-                predictions.data(), counts.data(), displs.data(), MPI_INT,
+                predictions.data(), counts.data(), displacements.data(), MPI_INT,
                 0, MPI_COMM_WORLD);
 
     const auto endT = chrono::high_resolution_clock::now();
@@ -212,7 +212,7 @@ void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
 
     // --------- MPI datatype for FlatNode ----------
     MPI_Datatype MPI_FlatNode;
-    const int blocklengths[5] = {1, 1, 1, 1, 1};
+    const int block_lengths[5] = {1, 1, 1, 1, 1};
     MPI_Aint offsets[5];
     const MPI_Datatype types[5] = {MPI_C_BOOL, MPI_INT, MPI_DOUBLE, MPI_INT, MPI_INT};
 
@@ -222,7 +222,7 @@ void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
     offsets[3] = offsetof(FlatNode, label);
     offsets[4] = offsetof(FlatNode, right);
 
-    MPI_Type_create_struct(5, blocklengths, offsets, types, &MPI_FlatNode);
+    MPI_Type_create_struct(5, block_lengths, offsets, types, &MPI_FlatNode);
     MPI_Type_commit(&MPI_FlatNode);
 
     // --------- Build local sizes + local buffer ----------
@@ -255,9 +255,9 @@ void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
                   comm);
 
     // compute displacements
-    std::vector node_displs(n_ranks, 0);
+    std::vector node_displacements(n_ranks, 0);
     for (int i = 1; i < n_ranks; ++i)
-        node_displs[i] = node_displs[i - 1] + all_nodes_counts[i - 1];
+        node_displacements[i] = node_displacements[i - 1] + all_nodes_counts[i - 1];
 
     const int total_nodes =
             std::accumulate(all_nodes_counts.begin(), all_nodes_counts.end(), 0);
@@ -265,7 +265,7 @@ void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
     // --------- Gather nodes ----------
     std::vector<FlatNode> all_nodes(total_nodes);
     MPI_Allgatherv(local_buffer.data(), local_nodes, MPI_FlatNode,
-                   all_nodes.data(), all_nodes_counts.data(), node_displs.data(), MPI_FlatNode,
+                   all_nodes.data(), all_nodes_counts.data(), node_displacements.data(), MPI_FlatNode,
                    comm);
 
     MPI_Type_free(&MPI_FlatNode);
@@ -273,7 +273,7 @@ void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
     // --------- Reconstruct full forest ----------
     std::vector<std::vector<FlatNode> > full_forest;
     full_forest.resize(total_trees);
-    std::vector<int> read_pos = node_displs;
+    std::vector<int> read_pos = node_displacements;
 
     for (int t = 0; t < total_trees; ++t) {
         bool filled = false;

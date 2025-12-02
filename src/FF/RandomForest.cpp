@@ -23,7 +23,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     int min_samples = 2;
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, min_samples, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, min_samples, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 // FastFlow version

@@ -2,12 +2,12 @@
 #include <functional>
 
 struct Node {
-    bool is_leaf{false};
-    int feature{-1};
-    double threshold{0};
-    int label{-1};
     Node *left{nullptr};
     Node *right{nullptr};
+    double threshold{0};
+    int feature{-1};
+    int label{-1};
+    bool is_leaf{false};
 
     // Destructor: recursively delete children
     ~Node() {
@@ -17,11 +17,11 @@ struct Node {
 };
 
 struct FlatNode {
-    bool is_leaf{false};
-    int feature{-1};
     double threshold{0};
+    int feature{-1};
     int label{-1};
     int right{-1}; // index of right child in flat array
+    bool is_leaf{false};
 
     // Hash function for FlatNode
     static size_t hashNode(const FlatNode &n) {
