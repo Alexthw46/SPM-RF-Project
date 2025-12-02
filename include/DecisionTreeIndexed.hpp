@@ -5,35 +5,6 @@
 #include "Node.hpp"
 
 /**
- * @brief Lightweight view wrapper for pre-sorted data.
- *
- * Provides read-only access to a 2D dataset where each feature's samples
- * are pre-sorted. This allows efficient access to sorted values without
- * modifying the original dataset.
- *
- * @tparam ViewType The type of the underlying dataset view (e.g., row-major or column-major).
- */
-template<typename ViewType>
-struct PreSortedView {
-    const ViewType &Xc;  // original dataset
-    const std::vector<std::vector<size_t>> &sorted_idx;
-
-    size_t n_samples;
-    size_t n_features;
-
-    // Access the value at the k-th sorted sample for feature f
-    double operator()(const size_t rank_in_sorted, size_t f) const {
-        size_t i = sorted_idx[f][rank_in_sorted];
-        return Xc(i, f);
-    }
-
-    // Optionally expose the actual sample index
-    size_t index(const size_t rank_in_sorted, size_t f) const {
-        return sorted_idx[f][rank_in_sorted];
-    }
-};
-
-/**
  * @brief Lightweight view wrapper for column-major data stored in a flat array.
  *
  * Provides read-only access to a 2D dataset stored in column-major layout
