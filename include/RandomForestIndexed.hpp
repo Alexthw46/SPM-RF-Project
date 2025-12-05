@@ -63,17 +63,26 @@ protected:
     int n_classes;
     /** @brief Collection of decision trees forming the forest. */
     std::vector<DecisionTree> trees;
-    /** @brief Mersenne Twister random number generator used for sampling. */
-    std::mt19937 gen;
+    // @brief Random number generator seed. */
+    unsigned int seed;
 };
 
 class RandomForestDistributed : public RandomForest {
 public:
     using RandomForest::RandomForest;
 
-    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X, bool distributionStrat) const;
+    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X,
+                                                 bool distributionStrat) const;
 
 
     void gather_all_trees(MPI_Comm comm);
 };
 
+class VersatileRandomForest : public RandomForest {
+public:
+    using RandomForest::RandomForest;
+
+    void fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y, bool parallelMode);
+
+    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double>> &X, bool parallelMode) const;
+};

@@ -18,10 +18,10 @@ constexpr bool verbose = false;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
-    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, n_classes, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 void RandomForest::fit(const vector<vector<double> > &X,
@@ -44,10 +44,9 @@ void RandomForest::fit(const vector<vector<double> > &X,
 
     const auto total_start = chrono::high_resolution_clock::now();
 #pragma omp parallel for schedule(static) default(none) shared(Xc, trees, y, start_tree, end_tree,\
-    size, rank, cout)
+    size, rank, seed, cout)
     for (size_t idx = start_tree; idx < end_tree; ++idx) {
-
-        std::mt19937 rng(gen() + idx);
+        std::mt19937 rng(seed + idx);
         std::uniform_int_distribution<size_t> dist(0, size - 1);
 
         std::vector<size_t> bootstrap_indices(size);
@@ -152,7 +151,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
 }
 
 std::vector<int> RandomForestDistributed::predict_batch(const std::vector<std::vector<double> > &X,
-                                                       const bool distributionStrat) const {
+                                                        const bool distributionStrat) const {
     if (distributionStrat) {
         /// Use standard RandomForest batch prediction (data distributed)
         return RandomForest::predict_batch(X);
@@ -169,7 +168,8 @@ std::vector<int> RandomForestDistributed::predict_batch(const std::vector<std::v
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
     const auto startT = chrono::high_resolution_clock::now();
     vector local_votes(N * n_classes, 0);
-#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes)
+#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes\
+)
     for (size_t i = 0; i < N; ++i) {
         for (size_t t = start_tree; t < end_tree; ++t) {
             const int p = trees[t].predict(X[i]);
@@ -178,7 +178,7 @@ std::vector<int> RandomForestDistributed::predict_batch(const std::vector<std::v
         }
     }
     // Reduce votes across all ranks
-    vector<int> global_votes(N * n_classes, 0);
+    vector global_votes(N * n_classes, 0);
     MPI_Allreduce(local_votes.data(), global_votes.data(), static_cast<int>(N * n_classes), MPI_INT, MPI_SUM,
                   MPI_COMM_WORLD);
     // Determine final predictions

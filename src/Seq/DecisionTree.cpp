@@ -11,7 +11,7 @@ using namespace std;
 
 // Constructor
 DecisionTree::DecisionTree(const int max_depth_, const int min_samples_, const unsigned int seed)
-    : max_depth(max_depth_), min_samples(min_samples_), root(nullptr), gen(seed) {}
+    : max_depth(max_depth_), min_samples_split(min_samples_), root(nullptr), gen(seed) {}
 
 // Multi-class Gini impurity
 // Gini is defined as 1 - sum(p_i^2) for each class i
@@ -65,7 +65,7 @@ Node* DecisionTree::build(const vector<vector<double>>& X, const vector<int>& y,
     const auto t_start = chrono::high_resolution_clock::now();
 
     // Stopping criteria
-    if (depth >= max_depth || y.size() <= static_cast<size_t>(min_samples) || gini(y) == 0) {
+    if (depth >= max_depth || y.size() <= static_cast<size_t>(min_samples_split) || gini(y) == 0) {
         const auto leaf = new Node();
         leaf->is_leaf = true;
         leaf->label = majority_label(y);

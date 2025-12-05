@@ -16,3 +16,4 @@ CMakeUserPresets.json
 *:Zone.Identifier
 *.csv
 *.gz
+*.Identifier

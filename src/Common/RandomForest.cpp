@@ -1,0 +1,127 @@
+#include "RandomForestIndexed.hpp"
+#include "DecisionTreeIndexed.hpp"
+
+#include <algorithm>
+#include <random>
+#include <chrono>
+#include <iostream>
+
+#include "FFNodes.hpp"
+#include "CSVLoader.hpp"
+using namespace std;
+constexpr bool verbose = false;
+
+// Constructor
+RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
+    // Initialize trees
+    for (int i = 0; i < n_trees; i++)
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
+}
+
+// Train forest with bootstrap sampling (index-based, no copies)
+void VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
+                                const std::vector<int> &y, bool parallelMode) {
+    // Flat ver
+    // Create a flat column-major array from the row-major data
+    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+
+    // Construct the flat column-major view
+    const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
+
+    const size_t size = X.size();
+    chrono::time_point<chrono::system_clock, chrono::system_clock::duration> total_start;
+
+    if (parallelMode) {
+        total_start = std::chrono::high_resolution_clock::now();
+        // Parallel loop over trees
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y, verbose, cout, size, seed)
+        for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
+            // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
+            std::mt19937 rng(seed + i);
+            std::uniform_int_distribution<size_t> dist(0, size - 1);
+
+            std::vector<size_t> bootstrap_indices(size);
+
+            // Bootstrap indices
+            for (size_t j = 0; j < size; ++j)
+                bootstrap_indices[j] = dist(rng);
+
+            // Fit the tree
+            trees[i].fit(Xc, y, bootstrap_indices);
+        }
+    }else {
+        ssize_t n_workers = ff_numCores();
+        // Define workers
+        vector<ff_node *> workers(n_workers);
+        ranges::generate(workers, [] { return new TreeWorker(); });
+
+        // Setup Farm with Emitter
+        ff_farm farm(workers);
+
+        // Use explicit mapping for pinning
+        farm.no_mapping();
+
+        farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, seed));
+
+        total_start = std::chrono::high_resolution_clock::now();
+        farm.run_and_wait_end();
+    }
+
+    const auto total_end = std::chrono::high_resolution_clock::now();
+    std::cout << "[Timing] RandomForest fit() total time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count()
+            << " ms\n";
+}
+
+// Predict for one sample
+int RandomForest::predict(const vector<double> &x) const {
+    vector vote_count(n_classes, 0);
+    // Collect votes from each tree
+    for (const auto &t: trees) {
+        const int p = t.predict(x);
+        vote_count[p]++;
+    }
+    // Return label with most votes
+    return static_cast<int>(std::distance(vote_count.begin(),
+                                          ranges::max_element(vote_count)));
+}
+
+// Batch prediction
+vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &X, bool parallelMode) const {
+    const size_t N = X.size();
+    vector<int> predictions(N);
+    chrono::time_point<chrono::system_clock> start;
+    if (parallelMode) {
+        start = chrono::high_resolution_clock::now();
+
+#pragma omp parallel for schedule(static) default(none) shared(X, predictions, N)
+        for (size_t i = 0; i < N; ++i)
+            predictions[i] = predict(X[i]);
+    } else {
+        const size_t nCores = ff_numCores();
+        size_t chunk_size = (X.size() + nCores - 1) / nCores;
+        // Avoid chunks too small
+        if (chunk_size < 50)
+            chunk_size = 50;
+        // cout << "Predicting " << X.size() << " samples using " << nCores << " cores with chunk size " << chunk_size << "." << endl;
+        // Define Workers
+        std::vector<ff_node *> workers(nCores);
+        ranges::generate(workers, [] { return new PredictWorker(); });
+
+        // Setup Farm with Emitter
+        ff_farm farm(workers);
+        farm.no_mapping();
+        farm.add_emitter(new PredictEmitter(*this, X, predictions, chunk_size));
+
+        // Run farm and time it
+        start = std::chrono::high_resolution_clock::now();
+        farm.run_and_wait_end();
+    }
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    cout << "[Timing] RandomForest predict_batch() total time: "
+            << chrono::duration_cast<chrono::milliseconds>(start - end).count()
+            << " ms" << endl;
+    return predictions;
+}

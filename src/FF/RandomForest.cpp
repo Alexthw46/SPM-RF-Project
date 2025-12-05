@@ -19,11 +19,11 @@ using namespace ff;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
-    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
     int min_samples = 2;
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, min_samples, n_classes, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, min_samples, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 // FastFlow version
@@ -46,7 +46,7 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     // Use explicit mapping for pinning
     farm.no_mapping();
 
-    farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, gen));
+    farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, seed));
 
     // Run farm and time it
     const auto total_start = chrono::high_resolution_clock::now();
@@ -79,8 +79,7 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     // Avoid chunks too small
     if (chunk_size < 50)
         chunk_size = 50;
-    cout << "Predicting " << X.size() << " samples using " << nCores
-            << " cores with chunk size " << chunk_size << "." << endl;
+    // cout << "Predicting " << X.size() << " samples using " << nCores << " cores with chunk size " << chunk_size << "." << endl;
     // Define Workers
     std::vector<ff_node *> workers(nCores);
     ranges::generate(workers, [] { return new PredictWorker(); });

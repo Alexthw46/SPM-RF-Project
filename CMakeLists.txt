@@ -17,10 +17,16 @@ find_package(OpenMP REQUIRED)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-Wall)
 
-set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -g -fno-inline-functions")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -fno-inline-functions")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -DNDEBUG")
 
 include_directories(include)
+
+add_executable(Comparison
+        src/Common/main.cpp
+        src/Common/DecisionTree.cpp
+        src/Common/RandomForest.cpp
+)
 
 add_executable(RandomForestSeq
         src/Seq/main.cpp
@@ -30,8 +36,8 @@ add_executable(RandomForestSeq
 
 add_executable(RandomForestOptimized
         src/Optimized/main.cpp
-        src/Common/DecisionTree.cpp
         src/Optimized/RandomForest.cpp
+        src/Common/DecisionTree.cpp
 )
 
 add_executable(RandomForestFF
@@ -56,6 +62,7 @@ add_executable(UnzipCovertype
         test/CovertypeToCvs.cpp
 )
 
+target_link_libraries(Comparison PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)
 
 target_link_libraries(RandomForestMPI PUBLIC MPI::MPI_CXX OpenMP::OpenMP_CXX)

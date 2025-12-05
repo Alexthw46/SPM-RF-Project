@@ -13,10 +13,10 @@ constexpr bool verbose = false;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
-    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, n_classes, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)
@@ -34,10 +34,10 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
     const size_t size = X.size();
 
     // Parallel loop over trees
-#pragma omp parallel for schedule(static) default(none) shared(Xc,y, verbose, cout, size)
+#pragma omp parallel for schedule(static) default(none) shared(Xc,y, verbose, cout, size, seed)
     for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
         // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
-        std::mt19937 rng(gen() + i);
+        std::mt19937 rng(seed + i);
         std::uniform_int_distribution<size_t> dist(0, size - 1);
 
         std::vector<size_t> bootstrap_indices(size);
@@ -65,14 +65,16 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
 
 // Predict for one sample
 int RandomForest::predict(const vector<double> &x) const {
-    unordered_map<int, int> vote_count;
+
+    vector vote_count(n_classes, 0);
     // Collect votes from each tree
     for (const auto &t: trees) {
-        int p = t.predict(x);
+        const int p = t.predict(x);
         vote_count[p]++;
-    } // Return label with most votes
-    return ranges::max_element(vote_count.begin(), vote_count.end(),
-                               [](const auto &a, const auto &b) { return a.second < b.second; })->first;
+    }
+    // Return label with most votes
+    return static_cast<int>(std::distance(vote_count.begin(),
+                                          ranges::max_element(vote_count)));
 }
 
 // Batch prediction

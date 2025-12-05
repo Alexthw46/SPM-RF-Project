@@ -61,12 +61,15 @@ struct RowMajorView {
 
 class DecisionTree {
 public:
-    DecisionTree(int max_depth_, int min_samples_, int n_classes, unsigned int seed);
+    DecisionTree(int max_depth_, int min_samples_, int min_samples_leaf_, int n_classes, unsigned int seed);
 
     template<class View>
     void fit(const View &Xc,
              const std::vector<int> &y,
              const std::vector<size_t> &indices) {
+
+        n_features = Xc.n_features;
+        n_try = std::max(1, static_cast<int>(sqrt(n_features)));
         // Start the recursive build from root using column-major view
         root = build(Xc, y, indices, 0);
 
@@ -85,6 +88,14 @@ public:
     void set_flat(std::vector<FlatNode> &&flat_tree) {
         flat = std::move(flat_tree);
         has_flat = true;
+    }
+
+    [[nodiscard]] std::string getInfo() const {
+        // Dump the number of nodes in the tree and the max depth
+        size_t n_nodes = 0;
+        for ([[maybe_unused]] const auto &n: flat)
+            n_nodes++;
+        return "Nodes: " + std::to_string(n_nodes) + ", Max Depth: " + std::to_string(max_depth);
     }
 
     static size_t hash_tree(const std::vector<FlatNode> &flatTree) {
@@ -163,8 +174,12 @@ public:
 
 private:
     int max_depth;
-    int min_samples;
+    int min_samples_split;
+    int min_samples_leaf;
     int n_classes;
+    int n_try;
+    int n_features;
+
     std::mt19937 gen;
 
     // Flat representation
@@ -185,7 +200,7 @@ private:
         if (n_samples == 0) return 0.0;
         double sum = 0.0;
         // Sum of squared class probabilities
-        for (const int c : counts) {
+        for (const int c: counts) {
             // Cast to double to avoid integer division
             const double p = static_cast<double>(c) / static_cast<double>(n_samples);
             sum += p * p;

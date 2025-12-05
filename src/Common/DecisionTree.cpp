@@ -2,7 +2,6 @@
 #include <vector>
 #include <random>
 #include <limits>
-#include <unordered_map>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -11,8 +10,11 @@
 
 using namespace std;
 
-DecisionTree::DecisionTree(const int max_depth_, const int min_samples_, const int n_classes, const unsigned int seed)
-    : max_depth(max_depth_), min_samples(min_samples_), n_classes(n_classes), gen(seed) {
+DecisionTree::DecisionTree(const int max_depth_, const int min_samples_, const int min_samples_leaf_,
+                           const int n_classes, const unsigned int seed)
+    : max_depth(max_depth_), min_samples_split(min_samples_), min_samples_leaf(min_samples_leaf_), n_classes(n_classes),
+      gen(seed) {
+    n_features = n_try = 1; // real init is in fit
 }
 
 // Recursive tree build
@@ -30,7 +32,7 @@ Node *DecisionTree::build(const View &Xc,
     for (const size_t idx: indices) counts[y[idx]]++;
 
     // Stopping criteria
-    if (depth >= max_depth || indices.size() <= static_cast<size_t>(min_samples) || gini_from_counts(
+    if (depth >= max_depth || indices.size() <= static_cast<size_t>(min_samples_split) || gini_from_counts(
             counts, indices.size()) == 0.0) {
         const auto leaf = new Node();
         leaf->is_leaf = true;
@@ -38,15 +40,12 @@ Node *DecisionTree::build(const View &Xc,
         return leaf;
     }
 
-    //Flat ver
-    const size_t n_features = Xc.n_features;
-    uniform_int_distribution feature_dist(0, static_cast<int>(n_features) - 1);
+    uniform_int_distribution feature_dist(0, n_features - 1);
 
     // Find best split
     int best_f = -1;
     double best_t = 0.0;
     double best_score = numeric_limits<double>::max();
-    const int n_try = max(1, static_cast<int>(sqrt(n_features)));
 
     // Pre-allocate count vectors that will be reused
     std::vector<int> left_counts(n_classes);
@@ -55,8 +54,10 @@ Node *DecisionTree::build(const View &Xc,
     const size_t val_size = indices.size();
     std::vector<pair<double, size_t> > vals(val_size);
 
+    // Start from sqrt(n_features) attempts and increase if needed, copy to avoid conflict
+    int n_try_node = n_try;
     // For each candidate feature chosen randomly
-    for (int k = 0; k < n_try; ++k) {
+    for (int k = 0; k < n_try_node; ++k) {
         const int f = feature_dist(gen);
 
         // collect (value, index) pairs for this feature
@@ -95,15 +96,15 @@ Node *DecisionTree::build(const View &Xc,
             // skip identical values for threshold
             if (curr == prev) continue;
 
-            // threshold is midpoint between unique values
+            // set threshold
             const double t = 0.5 * (curr + prev);
 
             // compute Gini efficiently using prefix counts,
             // inlined method version to optimize operations
             double sumL = 0.0;
             double sumR = 0.0;
-            const double inv_left_n = 1.0 / left_n;
-            const double inv_right_n = 1.0 / (val_size - left_n);
+            const double inv_left_n = 1.0 / static_cast<double>(left_n);
+            const double inv_right_n = 1.0 / static_cast<double>(val_size - left_n);
             for (int c = 0; c < n_classes; ++c) {
                 const double pL = static_cast<double>(left_counts[c]) * inv_left_n;
                 sumL += pL * pL;
@@ -121,6 +122,11 @@ Node *DecisionTree::build(const View &Xc,
                 best_f = f;
                 best_t = t;
             }
+        }
+
+        // if we are in the last try and there is still not a valid split, keep scrolling the features until n_features
+        if (k == n_try_node - 1 && best_f == -1 && n_try_node < n_features) {
+            ++n_try_node; // increase the number of tries
         }
     }
 
@@ -143,7 +149,8 @@ Node *DecisionTree::build(const View &Xc,
     }
 
     // If either side is empty, create leaf with majority label
-    if (left_idx.empty() || right_idx.empty()) {
+    if (left_idx.size() < static_cast<size_t>(min_samples_leaf) || right_idx.size() < static_cast<size_t>(
+            min_samples_leaf)) {
         const auto leaf = new Node();
         leaf->is_leaf = true;
         leaf->label = majority_label_from_counts(counts);
@@ -164,7 +171,7 @@ Node *DecisionTree::build(const View &Xc,
 int DecisionTree::predict_one(const Node *node, const vector<double> &x) {
     if (!node) {
         std::cerr << "ERROR: predict_one called with null node!" << std::endl;
-        return -1; // or throw
+        return -1;
     }
     // Base case: leaf node -> return label
     if (node->is_leaf) return node->label;

@@ -14,10 +14,10 @@ constexpr bool debug = false;
 
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
-    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
+    : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, n_classes, seed + i); // each tree gets unique deterministic seed
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)
@@ -34,16 +34,16 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
+    std::mt19937 rng(seed);
     // Fit each tree on a bootstrap sample
     for (size_t i = 0; i < trees.size(); i++) {
         auto &t = trees[i];
 
         // Generates indices to create the bootstrap sample to build the tree
-        // (no copies of data)
         vector<size_t> bootstrap_idx;
         bootstrap_idx.reserve(X.size());
         for (size_t j = 0; j < X.size(); j++)
-            bootstrap_idx.push_back(dist(gen));
+            bootstrap_idx.push_back(dist(rng));
 
         // Time the fitting of each tree
         const auto t_start = chrono::high_resolution_clock::now();

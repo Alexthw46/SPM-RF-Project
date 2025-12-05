@@ -15,7 +15,7 @@ public:
 
 private:
     int max_depth;
-    int min_samples;
+    int min_samples_split;
     Node* root;
     std::mt19937 gen;
 

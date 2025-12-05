@@ -186,8 +186,6 @@ public:
     vector<DecisionTree> &trees;
     /** @brief Pre-built tasks that will be emitted to workers. */
     vector<TreeTask> tasks;
-    /** @brief Preseeded RNG used to produce bootstrap seeds for each task. */
-    mt19937 gen;
 
     /**
      * @brief Construct a TreeBuildEmitter.
@@ -199,21 +197,21 @@ public:
      * @param t Reference to the vector of DecisionTree objects to build tasks for.
      * @param X_ Reference to the feature matrix view.
      * @param y_ Reference to the target labels vector.
-     * @param gen Reference to a random engine used to produce seeds for bootstrap sampling.
+     * @param seed Base seed for bootstrap sampling.
      */
     TreeBuildEmitter(vector<DecisionTree> &t,
                      const ColMajorViewFlat &X_,
                      const vector<int> &y_,
-                     mt19937 &gen
+                     unsigned int seed
     )
-        : X(X_), y(y_), trees(t), gen(gen) {
+        : X(X_), y(y_), trees(t) {
         tasks.reserve(trees.size());
         for (DecisionTree &tree: trees) {
             tasks.emplace_back(TreeTask{
                 tree,
                 X,
                 y,
-                gen()
+                seed++
             });
         }
     }

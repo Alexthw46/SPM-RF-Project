@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
             debug = true;
         } else if (a == "-t" || a == "--trees") {
             if (i + 1 < argc) n_trees = stoi(argv[++i]);
-        } else if (a == "-m" || a == "--max-depth") {
+        } else if (a == "-md" || a == "--max-depth") {
             if (i + 1 < argc) max_depth = stoi(argv[++i]);
         } else if (a == "-s" || a == "--seed") {
             if (i + 1 < argc) global_seed = stoi(argv[++i]);
@@ -42,17 +42,20 @@ int main(int argc, char *argv[]) {
     // Initialize MPI
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-    if (provided < MPI_THREAD_FUNNELED) {
-        std::cerr << "MPI does not provide required thread support.\n";
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    } else {
-        std::cout << "MPI initialized with thread support level: " << provided << "\n";
-    }
+
 
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    if (rank == 0) {
+        if (provided < MPI_THREAD_FUNNELED) {
+            std::cerr << "MPI does not provide required thread support.\n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        } else {
+            std::cout << "MPI initialized with thread support level: " << provided << "\n";
+        }
+    }
     // Total logical cores on the node
     int total_cores = static_cast<int>(std::thread::hardware_concurrency());
 
