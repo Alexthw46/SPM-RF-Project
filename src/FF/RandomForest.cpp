@@ -27,7 +27,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
 }
 
 // FastFlow version
-void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
+long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     ssize_t n_workers = ff_numCores();
     // Define workers
     vector<ff_node *> workers(n_workers);
@@ -52,11 +52,10 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     const auto total_start = chrono::high_resolution_clock::now();
     farm.run_and_wait_end();
     const auto total_end = chrono::high_resolution_clock::now();
-    cout << "All trees built in parallel using " << n_workers << " workers." << endl;
-
     cout << "[Timing] RandomForest fit() total time: "
             << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
             << " ms" << endl;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
 }
 
 // Predict for one sample

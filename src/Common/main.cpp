@@ -3,8 +3,42 @@
 #include  <omp.h>
 #include "RandomForestIndexed.hpp"
 #include "CSVLoader.hpp"
+#include <ff/ff.hpp>
 #include "TrainTestSplit.hpp"
 using namespace std;
+
+void test_random_forest(const bool debug, const int n_trees, const int max_depth, const int global_seed,
+                        const int max_label, const std::vector<std::vector<double> > &X_train,
+                        const std::vector<int> &y_train, const std::vector<std::vector<double> > &X_test,
+                        const std::vector<int> &y_test, const bool parallelMode) {
+
+    // Create and train the random forest
+    VersatileRandomForest rf(n_trees, max_depth, max_label + 1, global_seed);
+    rf.fit(X_train, y_train, parallelMode);
+
+    if (debug) {
+        // print the depth of each tree
+        int i = 0;
+        for (const auto &tree: rf.getForest()) {
+            cout << "Tree " << i << " number of nodes: " << tree.getInfo() << "\n";
+            ++i;
+        }
+    }
+
+    // Evaluate accuracy on training set
+    const auto train_predictions = rf.predict_batch(X_train, true);
+    const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
+    cout << "Training Accuracy: " << train_accuracy << endl;
+    cout << "Classification Report (Train):\n";
+    cout << TrainTestSplit::classification_report(y_train, train_predictions) << endl;
+
+    // Evaluate accuracy on test set
+    const auto test_predictions = rf.predict_batch(X_test, true);
+    const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
+    cout << "Test Accuracy: " << test_accuracy << endl;
+    cout << "Classification Report (Test):\n";
+    cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
+}
 
 int main(const int argc, char *argv[]) {
     bool debug = false;
@@ -77,32 +111,10 @@ int main(const int argc, char *argv[]) {
     const auto X_test = TrainTestSplit::subset_X(X, test_indices);
     const auto y_test = TrainTestSplit::subset_y(y, test_indices);
 
+
     cout << "OpenMP variant using: " << omp_get_max_threads() << " devices\n";
+    test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, true);
 
-    // Create and train the random forest
-    RandomForest rf(n_trees, max_depth, max_label + 1, global_seed);
-    rf.fit(X_train, y_train);
-
-    if (debug) {
-        // print the depth of each tree
-        int i = 0;
-        for (const auto &tree: rf.getForest()) {
-            cout << "Tree " << i << " number of nodes: " << tree.getInfo() << "\n";
-            ++i;
-        }
-    }
-
-    // Evaluate accuracy on training set
-    const auto train_predictions = rf.predict_batch(X_train);
-    const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
-    cout << "Training Accuracy: " << train_accuracy << endl;
-    cout << "Classification Report (Train):\n";
-    cout << TrainTestSplit::classification_report(y_train, train_predictions) << endl;
-
-    // Evaluate accuracy on test set
-    const auto test_predictions = rf.predict_batch(X_test);
-    const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
-    cout << "Test Accuracy: " << test_accuracy << endl;
-    cout << "Classification Report (Test):\n";
-    cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
+    cout << "Fastflow variant using: " << ff_numCores() << " devices\n";
+    test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, false);
 }

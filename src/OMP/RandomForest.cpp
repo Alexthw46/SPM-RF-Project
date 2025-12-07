@@ -20,7 +20,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)
-void RandomForest::fit(const std::vector<std::vector<double> > &X,
+long RandomForest::fit(const std::vector<std::vector<double> > &X,
                        const std::vector<int> &y) {
     const auto total_start = std::chrono::high_resolution_clock::now();
 
@@ -58,14 +58,15 @@ void RandomForest::fit(const std::vector<std::vector<double> > &X,
     }
 
     const auto total_end = std::chrono::high_resolution_clock::now();
+    const long total_time = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
     std::cout << "[Timing] RandomForest fit() total time: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count()
+            << total_time
             << " ms\n";
+    return total_time;
 }
 
 // Predict for one sample
 int RandomForest::predict(const vector<double> &x) const {
-
     vector vote_count(n_classes, 0);
     // Collect votes from each tree
     for (const auto &t: trees) {

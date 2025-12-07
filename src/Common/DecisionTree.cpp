@@ -101,10 +101,10 @@ Node *DecisionTree::build(const View &Xc,
 
             // compute Gini efficiently using prefix counts,
             // inlined method version to optimize operations
-            double sumL = 0.0;
-            double sumR = 0.0;
             const double inv_left_n = 1.0 / static_cast<double>(left_n);
             const double inv_right_n = 1.0 / static_cast<double>(val_size - left_n);
+            double sumL = 0.0;
+            double sumR = 0.0;
             for (int c = 0; c < n_classes; ++c) {
                 const double pL = static_cast<double>(left_counts[c]) * inv_left_n;
                 sumL += pL * pL;

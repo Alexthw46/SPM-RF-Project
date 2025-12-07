@@ -3,6 +3,8 @@
 #include <mpi.h>
 #include <vector>
 #include <random>
+#include <bits/chrono.h>
+
 #include "DecisionTreeIndexed.hpp"
 
 /**
@@ -28,7 +30,7 @@ public:
      * @param X Feature matrix where each inner vector is a sample.
      * @param y Corresponding class labels for each sample in X.
      */
-    void fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y);
+    long fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y);
 
     /**
      * @brief Predict the class label for a single sample.
@@ -82,7 +84,7 @@ class VersatileRandomForest : public RandomForest {
 public:
     using RandomForest::RandomForest;
 
-    void fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y, bool parallelMode);
+    long fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y, bool parallelMode);
 
     [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double>> &X, bool parallelMode) const;
 };

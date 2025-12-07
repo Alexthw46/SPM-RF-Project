@@ -24,7 +24,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
         trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
 
-void RandomForest::fit(const vector<vector<double> > &X,
+long RandomForest::fit(const vector<vector<double> > &X,
                        const vector<int> &y) {
     int rank, n_ranks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -73,6 +73,7 @@ void RandomForest::fit(const vector<vector<double> > &X,
         cout << "[Timing] RandomForest MPI fit() total time: "
                 << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
                 << " ms\n";
+    return std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
 }
 
 // Predict for one sample

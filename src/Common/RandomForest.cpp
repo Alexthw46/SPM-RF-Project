@@ -20,7 +20,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
 }
 
 // Train forest with bootstrap sampling (index-based, no copies)
-void VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
+long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
                                 const std::vector<int> &y, bool parallelMode) {
     // Flat ver
     // Create a flat column-major array from the row-major data
@@ -50,7 +50,7 @@ void VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             // Fit the tree
             trees[i].fit(Xc, y, bootstrap_indices);
         }
-    }else {
+    } else {
         ssize_t n_workers = ff_numCores();
         // Define workers
         vector<ff_node *> workers(n_workers);
@@ -61,17 +61,17 @@ void VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
 
         // Use explicit mapping for pinning
         farm.no_mapping();
-
-        farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, seed));
-
         total_start = std::chrono::high_resolution_clock::now();
+        farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, seed));
         farm.run_and_wait_end();
     }
 
     const auto total_end = std::chrono::high_resolution_clock::now();
+    const long total_time = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
     std::cout << "[Timing] RandomForest fit() total time: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count()
+            << total_time
             << " ms\n";
+    return total_time;
 }
 
 // Predict for one sample
@@ -121,7 +121,7 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
     const auto end = std::chrono::high_resolution_clock::now();
 
     cout << "[Timing] RandomForest predict_batch() total time: "
-            << chrono::duration_cast<chrono::milliseconds>(start - end).count()
+            << chrono::duration_cast<chrono::milliseconds>(end-start).count()
             << " ms" << endl;
     return predictions;
 }
