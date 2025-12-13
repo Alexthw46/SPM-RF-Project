@@ -21,9 +21,9 @@ INCLUDES := -Iinclude -I$(FASTFLOW_DIR)
 # Common flags
 CXXFLAGS := -std=c++20 -Wall $(INCLUDES)
 ifeq ($(BUILD),Debug)
-CXXFLAGS += -g -fno-inline-functions -mavx2 -mfma
+CXXFLAGS += -g -fno-inline-functions
 else
-CXXFLAGS += -O3 -ffast-math -DNDEBUG -mavx2 -march=native -mfma
+CXXFLAGS += -O3 -ffast-math -DNDEBUG
 endif
 
 OPENMP_FLAGS := -fopenmp

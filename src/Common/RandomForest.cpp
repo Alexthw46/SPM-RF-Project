@@ -90,10 +90,10 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
     }
 
     const auto total_end = std::chrono::high_resolution_clock::now();
-    const long total_time = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
+    const long total_time = std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count();
     std::cout << "[Timing] RandomForest fit() total time: "
             << total_time
-            << " ms\n";
+            << " us\n";
     return total_time;
 }
 
@@ -118,17 +118,14 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
     switch (parallelMode) {
         case 1: {
             start = chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(static, 64) default(none) shared(X, predictions, N)
+#pragma omp parallel for schedule(static) default(none) shared(X, predictions, N)
             for (size_t i = 0; i < N; ++i)
                 predictions[i] = predict(X[i]);
             break;
         }
         case 2: {
             const size_t nCores = ff_numCores();
-            size_t chunk_size = (X.size() + nCores - 1) / nCores;
-            // Avoid chunks too small
-            if (chunk_size < 64)
-                chunk_size = 64;
+            size_t chunk_size = std::min((X.size() + nCores - 1) / nCores, 64UL);
             cout << "Predicting " << X.size() << " samples using " << nCores << " cores with chunk size " << chunk_size
                     << "." << endl;
             // Define Workers
@@ -154,7 +151,7 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
     const auto end = std::chrono::high_resolution_clock::now();
 
     cout << "[Timing] RandomForest predict_batch() total time: "
-            << chrono::duration_cast<chrono::milliseconds>(end - start).count()
-            << " ms" << endl;
+            << chrono::duration_cast<chrono::microseconds>(end - start).count()
+            << " us" << endl;
     return predictions;
 }

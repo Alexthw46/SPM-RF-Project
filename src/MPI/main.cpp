@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-
+    /*
     if (rank == 0) cout << "Starting Inference.\n";
 
     // Evaluate accuracy on training set (rank 0)
@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
     if (rank == 0) {
         const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
         cout << "Training Accuracy: " << train_accuracy << endl;
-    }
+    }*/
 
     // Evaluate accuracy on test set (rank 0)
     cout << "[Rank " << rank << "] Evaluating test accuracy...\n";
@@ -189,6 +189,14 @@ int main(int argc, char *argv[]) {
     if (rank == 0) {
         const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
         cout << "Test Accuracy: " << test_accuracy << endl;
+        cout << "Classification Report (Test):\n";
+        cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
+
+        // Write predictions to file
+        const string mode_str = distribute_data_or_trees ? "data_distributed" : "trees_distributed";
+        const string n_ranks = std::to_string(size);
+        const std::string test_filename = std::string("test_predictions_") + mode_str + "_" + n_ranks + ".csv";
+        DatasetHelper::writeToCSV(test_filename.c_str(), test_predictions);
     }
 
     // Finalize MPI
