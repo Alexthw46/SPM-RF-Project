@@ -14,7 +14,6 @@ int main(int argc, char *argv[]) {
     int n_trees = 100; // default preserved
     int max_depth = 10; // default preserved
     int global_seed = 42; // default preserved
-    bool distribute_data_or_trees = true;
 
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
@@ -25,15 +24,6 @@ int main(int argc, char *argv[]) {
             if (i + 1 < argc) max_depth = stoi(argv[++i]);
         } else if (a == "-s" || a == "--seed") {
             if (i + 1 < argc) global_seed = stoi(argv[++i]);
-        } else if (a == "-m" || a == "--mode") {
-            // parse either d or t
-            if (i + 1 < argc) {
-                if (string mode = argv[++i]; mode == "d") {
-                    distribute_data_or_trees = true;
-                } else if (mode == "t") {
-                    distribute_data_or_trees = false;
-                }
-            }
         } else {
             csv_file = a;
         }
@@ -130,7 +120,7 @@ int main(int argc, char *argv[]) {
     const auto y_test = TrainTestSplit::subset_y(y, test_indices);
 
     // Create and train the random forest for this MPI process
-    RandomForestDistributed rf(n_trees, max_depth, max_label + 1, global_seed);
+    RandomForest rf(n_trees, max_depth, max_label + 1, global_seed);
 
     // Train the trees assigned to this rank
     long train_time = rf.fit(X_train, y_train);
@@ -138,41 +128,6 @@ int main(int argc, char *argv[]) {
     if (debug)
         cout << "Training completed on rank " << rank << "in " << train_time << " us.\n";
 
-    if (distribute_data_or_trees) {
-        if (rank == 0) {
-            cout << "Gathering trees from all ranks...\n";
-        }
-
-        if (size > 1)
-            // Broadcast trained trees to all ranks via MPI
-            rf.gather_all_trees(MPI_COMM_WORLD);
-
-        // Check if all trees are gathered (only rank 0)
-        if (rank == 0) {
-            if (rf.is_full_and_flat()) {
-                cout << "All trees gathered successfully in rank " << rank << ".\n";
-                if (debug) {
-                    auto forest = rf.getForest();
-                    for (size_t i = 0; i < forest.size(); ++i) {
-                        const auto &tree = forest[i];
-                        cout << "Rank " << rank << " Tree " << i << " has " << tree.getFlat().size() << " nodes. Hash: "
-                                << DecisionTree::hash_tree(tree.getFlat()) << "\n";
-                    }
-                }
-            } else {
-                cout << "Error: Not all trees were gathered correctly.\n";
-                auto forest = rf.getForest();
-                // find out which indexes are missing or are not flat
-                for (size_t i = 0; i < forest.size(); ++i) {
-                    if (const auto &tree = forest[i]; !tree.hasFlat()) {
-                        cout << "Tree " << i << " is missing or not flat.\n";
-                    }
-                }
-                MPI_Abort(MPI_COMM_WORLD, 1);
-                return 1;
-            }
-        }
-    }
     /*
     if (rank == 0) cout << "Starting Inference.\n";
 
@@ -188,7 +143,7 @@ int main(int argc, char *argv[]) {
     if (debug)
         cout << "[Rank " << rank << "] Evaluating test accuracy...\n";
 
-    const std::vector<int> test_predictions = rf.predict_batch(X_test, distribute_data_or_trees);
+    const std::vector<int> test_predictions = rf.predict_batch(X_test);
     if (rank == 0) {
         const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
         cout << "Test Accuracy: " << test_accuracy << endl;
@@ -196,9 +151,8 @@ int main(int argc, char *argv[]) {
         cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
 
         // Write predictions to file
-        const string mode_str = distribute_data_or_trees ? "data_distributed" : "trees_distributed";
         const string n_ranks = std::to_string(size);
-        const std::string test_filename = std::string("test_predictions_") + mode_str + "_" + n_ranks + ".csv";
+        const std::string test_filename = std::string("test_predictions_") + n_ranks + ".csv";
         DatasetHelper::writeToCSV(test_filename.c_str(), test_predictions);
     }
 

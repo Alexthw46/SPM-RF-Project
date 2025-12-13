@@ -68,17 +68,6 @@ protected:
     unsigned int seed;
 };
 
-class RandomForestDistributed : public RandomForest {
-public:
-    using RandomForest::RandomForest;
-
-    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X,
-                                                 bool distributionStrat) const;
-
-    template<typename Comm>
-    void gather_all_trees(Comm comm);
-};
-
 class VersatileRandomForest : public RandomForest {
 public:
     using RandomForest::RandomForest;
