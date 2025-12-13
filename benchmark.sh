@@ -12,5 +12,5 @@ make RandomForestMPI
 for N in 1 2 4 8; do
     echo "Running with $N nodes"
     srun --nodes=$N --ntasks-per-node=1 --time=00:2:00 \
-                --mpi=pmix ./my_mpi_program ./RandomForestMPI "./test/magic04.data" -t 100 -md 100 -m t > mpi_output_${N}_nodes.log 2>&1
+                --mpi=pmix ./RandomForestMPI "./test/magic04.data" -t 100 -md 100 -m t > mpi_output_${N}_nodes.log 2>&1
 done
