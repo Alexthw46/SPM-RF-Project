@@ -18,7 +18,7 @@ void test_random_forest(const bool debug, const int n_trees, const int max_depth
     // Evaluate accuracy on training set
     //const std::vector<int> train_predictions = rf.predict_batch(X_train, true);
     // Evaluate accuracy on test set
-    const std::vector<int> test_predictions = rf.predict_batch(X_test, true);
+    const std::vector<int> test_predictions = rf.predict_batch(X_test, parallelMode);
     const string mode_str = (parallelMode == 1) ? "openmp" : (parallelMode == 2) ? "fastflow" : "sequential";
     // Write predictions to files
     //const std::string train_filename = std::string("train_predictions_") + mode_str + ".csv";
