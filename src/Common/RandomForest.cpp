@@ -78,13 +78,13 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             uniform_int_distribution<size_t> dist(0, X.size() - 1);
             std::mt19937 rng(seed);
             // Fit each tree on a bootstrap sample
-            for (auto &t: trees) {
+            std::vector<size_t> bootstrap_idx(size);
+            for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
+                rng.seed(seed + i);
                 // Generates indices to create the bootstrap sample to build the tree
-                vector<size_t> bootstrap_idx;
-                bootstrap_idx.reserve(X.size());
-                for (size_t j = 0; j < X.size(); j++)
-                    bootstrap_idx.push_back(dist(rng));
-                t.fit(Xc, y, bootstrap_idx);
+                for (size_t j = 0; j < size; ++j)
+                    bootstrap_idx[j] = dist(rng);
+                trees[i].fit(Xc, y, bootstrap_idx);
             }
         }
     }
