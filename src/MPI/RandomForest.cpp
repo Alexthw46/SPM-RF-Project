@@ -72,7 +72,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
     if (rank == 0)
         cout << "[Timing] RandomForest MPI fit() total time: "
                 << total_time
-                << " ms\n";
+                << " us\n";
     return total_time;
 }
 
