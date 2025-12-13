@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 #include <iostream>
 #include "RandomForestIndexed.hpp"
-#include "CSVLoader.hpp"
+#include "DatasetHelper.hpp"
 #include "TrainTestSplit.hpp"
 using namespace std;
 
@@ -9,9 +9,9 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
-    int n_trees = 100;    // default value
-    int max_depth = 10;   // default value
-    int seed = 42;        // default value
+    int n_trees = 100; // default value
+    int max_depth = 10; // default value
+    int seed = 42; // default value
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
@@ -28,7 +28,7 @@ int main(const int argc, char *argv[]) {
     vector<vector<double> > X;
     vector<int> y;
 
-    if (!CSVLoader::loadCSV(csv_file, X, y)) {
+    if (!DatasetHelper::loadCSV(csv_file, X, y)) {
         cerr << "Failed to open CSV file.\n";
         return 1;
     }
@@ -66,7 +66,7 @@ int main(const int argc, char *argv[]) {
     TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices, true, seed);
 
     cout << "Train samples: " << train_indices.size()
-         << ", Test samples: " << test_indices.size() << "\n";
+            << ", Test samples: " << test_indices.size() << "\n";
 
     // Create training subsets
     const auto X_train = TrainTestSplit::subset_X(X, train_indices);
@@ -77,7 +77,7 @@ int main(const int argc, char *argv[]) {
     const auto y_test = TrainTestSplit::subset_y(y, test_indices);
 
     // Create and train the random forest
-    RandomForest rf(n_trees, max_depth, max_label+1, seed);
+    RandomForest rf(n_trees, max_depth, max_label + 1, seed);
     rf.fit(X_train, y_train);
 
     // Evaluate accuracy on training set

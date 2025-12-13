@@ -1,13 +1,11 @@
-#ifndef CSVLOADER_HPP
-#define CSVLOADER_HPP
-
+#pragma once
 #include <string>
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
 
-class CSVLoader {
+class DatasetHelper {
 public:
     // Load CSV in X (features) e y (String labels mapped to int)
     static bool loadCSV(const std::string &filename, std::vector<std::vector<double> > &X, std::vector<int> &y) {
@@ -81,6 +79,15 @@ public:
 
         return X_col_major;
     }
-};
 
-#endif // CSVLOADER_HPP
+    static void writeToCSV(const char *str, const std::vector<int> &vector) {
+        std::ofstream file(str);
+        if (!file.is_open()) return;
+
+        for (const auto &val: vector) {
+            file << val << "\n";
+        }
+
+        file.close();
+    };
+};

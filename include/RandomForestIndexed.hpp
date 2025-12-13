@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <mpi.h>
 #include <vector>
 #include <random>
 #include <bits/chrono.h>
@@ -76,15 +75,16 @@ public:
     [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X,
                                                  bool distributionStrat) const;
 
-
-    void gather_all_trees(MPI_Comm comm);
+    template<typename Comm>
+    void gather_all_trees(Comm comm);
 };
 
 class VersatileRandomForest : public RandomForest {
 public:
     using RandomForest::RandomForest;
 
-    long fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y, bool parallelMode);
+    long fit(const std::vector<std::vector<double> > &X, const std::vector<int> &y, unsigned int parallelMode);
 
-    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double>> &X, bool parallelMode) const;
+    [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double> > &X,
+                                                 unsigned int parallelMode) const;
 };

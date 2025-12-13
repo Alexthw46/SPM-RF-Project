@@ -23,11 +23,10 @@ CXXFLAGS := -std=c++20 -Wall $(INCLUDES)
 ifeq ($(BUILD),Debug)
 CXXFLAGS += -g -fno-inline-functions -mavx2 -mfma
 else
-CXXFLAGS += -O3 -ffast-math -DNDEBUG -mavx2 -march=native -mfma -fopt-info-vec-missed
+CXXFLAGS += -O3 -ffast-math -DNDEBUG -mavx2 -march=native -mfma
 endif
 
 OPENMP_FLAGS := -fopenmp
-ZLIB_LIBS := -lz
 
 # Sources per target
 COMPARISON_SRCS := src/Common/main.cpp src/Common/DecisionTree.cpp src/Common/RandomForest.cpp
@@ -36,7 +35,6 @@ OPT_SRCS        := src/Optimized/main.cpp src/Optimized/RandomForest.cpp src/Com
 FF_SRCS         := src/FF/main.cpp src/FF/RandomForest.cpp src/Common/DecisionTree.cpp
 OMP_SRCS        := src/OMP/main.cpp src/OMP/RandomForest.cpp src/Common/DecisionTree.cpp
 MPI_SRCS        := src/MPI/main.cpp src/MPI/RandomForest.cpp src/Common/DecisionTree.cpp
-UNZIP_SRCS      := test/CovertypeToCvs.cpp
 
 # Object lists (replace .cpp -> .o)
 COMPARISON_OBJS := $(COMPARISON_SRCS:.cpp=.o)
@@ -45,7 +43,6 @@ OPT_OBJS        := $(OPT_SRCS:.cpp=.o)
 FF_OBJS         := $(FF_SRCS:.cpp=.o)
 OMP_OBJS        := $(OMP_SRCS:.cpp=.o)
 MPI_OBJS        := $(MPI_SRCS:.cpp=.o)
-UNZIP_OBJS      := $(UNZIP_SRCS:.cpp=.o)
 
 # Targets
 ALL_TARGETS := Comparison RandomForestSeq RandomForestOptimized RandomForestFF RandomForestOMP RandomForestMPI
@@ -72,13 +69,15 @@ RandomForestOMP: $(OMP_OBJS)
 RandomForestMPI: $(MPI_OBJS)
 	$(MPICXX) $(CXXFLAGS) -o $@ $^ $(OPENMP_FLAGS)
 
-UnzipCovertype: $(UNZIP_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(ZLIB_LIBS)
+# MPI-specific compile rule
+src/MPI/%.o: src/MPI/%.cpp
+	@mkdir -p $(dir $@)
+	$(MPICXX) $(CXXFLAGS) $(OPENMP_FLAGS) -c $< -o $@
 
 # Generic compile rule
 %.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(OPENMP_FLAGS) -c $< -o $@
 
 clean:
 	-rm -f $(ALL_TARGETS) */*.o */*/*.o */*/*/*.o

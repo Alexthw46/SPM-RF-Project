@@ -10,7 +10,7 @@
 #include <mpi.h>
 #include <vector>
 
-#include "CSVLoader.hpp"
+#include "DatasetHelper.hpp"
 
 using namespace std;
 
@@ -37,7 +37,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
 
     // Flat ver
     // Create a flat column-major array from the row-major data
-    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+    std::vector<double> X_flat = DatasetHelper::transpose_flat(X);
 
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
@@ -203,8 +203,11 @@ std::vector<int> RandomForestDistributed::predict_batch(const std::vector<std::v
     return predictions;
 }
 
+// Templates avoids needing mpi.h in the shared header
+template void RandomForestDistributed::gather_all_trees<MPI_Comm>(MPI_Comm);
 
-void RandomForestDistributed::gather_all_trees(MPI_Comm comm) {
+template<typename Comm>
+void RandomForestDistributed::gather_all_trees(Comm comm) {
     int rank, n_ranks;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &n_ranks);

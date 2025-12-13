@@ -2,7 +2,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <omp.h>
-#include "CSVLoader.hpp"
+#include "DatasetHelper.hpp"
 #include "RandomForestIndexed.hpp"
 #include "TrainTestSplit.hpp"
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     vector<int> y;
 
     // Replace with path to your CSV
-    if (!CSVLoader::loadCSV(csv_file, X, y)) {
+    if (!DatasetHelper::loadCSV(csv_file, X, y)) {
         if (rank == 0) cerr << "Failed to open CSV file.\n";
         MPI_Finalize();
         return 1;

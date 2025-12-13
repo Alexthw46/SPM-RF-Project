@@ -2,7 +2,7 @@
 #include <iostream>
 #include  <omp.h>
 #include "RandomForestIndexed.hpp"
-#include "CSVLoader.hpp"
+#include "DatasetHelper.hpp"
 #include "TrainTestSplit.hpp"
 using namespace std;
 
@@ -30,7 +30,7 @@ int main(const int argc, char *argv[]) {
     vector<vector<double> > X;
     vector<int> y;
 
-    if (!CSVLoader::loadCSV(csv_file, X, y)) {
+    if (!DatasetHelper::loadCSV(csv_file, X, y)) {
         cerr << "Failed to open CSV file.\n";
         return 1;
     }
@@ -86,7 +86,7 @@ int main(const int argc, char *argv[]) {
     if (debug) {
         // print the depth of each tree
         int i = 0;
-        for (const auto& tree : rf.getForest()) {
+        for (const auto &tree: rf.getForest()) {
             cout << "Tree " << i << " number of nodes: " << tree.getInfo() << "\n";
             ++i;
         }

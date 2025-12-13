@@ -7,7 +7,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "CSVLoader.hpp"
+#include "DatasetHelper.hpp"
 using namespace std;
 
 constexpr bool debug = false;
@@ -29,7 +29,7 @@ long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
 
     // Flat ver
     // Create a flat column-major array from the row-major data
-    std::vector<double> X_flat = CSVLoader::transpose_flat(X);
+    std::vector<double> X_flat = DatasetHelper::transpose_flat(X);
 
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};

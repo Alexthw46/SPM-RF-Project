@@ -67,7 +67,6 @@ public:
     void fit(const View &Xc,
              const std::vector<int> &y,
              const std::vector<size_t> &indices) {
-
         n_features = Xc.n_features;
         n_try = std::max(1, static_cast<int>(sqrt(n_features)));
         // Start the recursive build from root using column-major view
@@ -83,6 +82,9 @@ public:
         flat.reserve(reserve_size);
         dfs_flat(root, flat);
         has_flat = true;
+        // Delete the original tree to save memory
+        delete root;
+        root = nullptr;
     }
 
     void set_flat(std::vector<FlatNode> &&flat_tree) {
