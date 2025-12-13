@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     int total_cores = static_cast<int>(std::thread::hardware_concurrency());
 
     // Compute threads per rank, at least 1
-    int threads_per_rank = std::max(1, total_cores / size);
+    int threads_per_rank = total_cores; // std::max(1, total_cores / size);
 
     omp_set_num_threads(threads_per_rank);
 
@@ -133,9 +133,10 @@ int main(int argc, char *argv[]) {
     RandomForestDistributed rf(n_trees, max_depth, max_label + 1, global_seed);
 
     // Train the trees assigned to this rank
-    rf.fit(X_train, y_train);
+    long train_time = rf.fit(X_train, y_train);
 
-    cout << "Training completed on rank " << rank << ".\n";
+    if (debug)
+        cout << "Training completed on rank " << rank << "in " << train_time << " us.\n";
 
     if (distribute_data_or_trees) {
         if (rank == 0) {
@@ -184,7 +185,9 @@ int main(int argc, char *argv[]) {
     }*/
 
     // Evaluate accuracy on test set (rank 0)
-    cout << "[Rank " << rank << "] Evaluating test accuracy...\n";
+    if (debug)
+        cout << "[Rank " << rank << "] Evaluating test accuracy...\n";
+
     const std::vector<int> test_predictions = rf.predict_batch(X_test, distribute_data_or_trees);
     if (rank == 0) {
         const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);

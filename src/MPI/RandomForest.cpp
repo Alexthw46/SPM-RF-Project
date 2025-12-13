@@ -35,7 +35,6 @@ long RandomForest::fit(const vector<vector<double> > &X,
     const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
     const size_t size = X.size();
 
-    // Flat ver
     // Create a flat column-major array from the row-major data
     std::vector<double> X_flat = DatasetHelper::transpose_flat(X);
 
@@ -69,11 +68,12 @@ long RandomForest::fit(const vector<vector<double> > &X,
         MPI_Barrier(MPI_COMM_WORLD);
     const auto total_end = chrono::high_resolution_clock::now();
 
+    const long total_time = chrono::duration_cast<chrono::microseconds>(total_end - total_start).count();
     if (rank == 0)
         cout << "[Timing] RandomForest MPI fit() total time: "
-                << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
+                << total_time
                 << " ms\n";
-    return std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
+    return total_time;
 }
 
 // Predict for one sample
@@ -118,8 +118,8 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
     if (n_ranks == 1) {
         const auto endT = chrono::high_resolution_clock::now();
         cout << "[Timing Rank " << rank << "] RandomForest predict_batch() total time: "
-                << chrono::duration_cast<chrono::milliseconds>(endT - startT).count()
-                << " ms" << endl;
+                << chrono::duration_cast<chrono::microseconds>(endT - startT).count()
+                << " us" << endl;
         return local_predictions;
     }
 
@@ -143,10 +143,10 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
                 0, MPI_COMM_WORLD);
 
     const auto endT = chrono::high_resolution_clock::now();
-    if (rank == 0)
+    if (rank == 0 && verbose)
         cout << "[Timing Rank " << rank << "] RandomForest predict_batch() total time: "
-                << chrono::duration_cast<chrono::milliseconds>(endT - startT).count()
-                << " ms" << endl;
+                << chrono::duration_cast<chrono::microseconds>(endT - startT).count()
+                << " us" << endl;
 
     return predictions; // valid only on rank 0
 }
@@ -198,8 +198,8 @@ std::vector<int> RandomForestDistributed::predict_batch(const std::vector<std::v
     const auto endT = chrono::high_resolution_clock::now();
     if (rank == 0)
         cout << "[Timing Rank " << rank << "] RandomForest predict_batch() total time: "
-                << chrono::duration_cast<chrono::milliseconds>(endT - startT).count()
-                << " ms" << endl;
+                << chrono::duration_cast<chrono::microseconds>(endT - startT).count()
+                << " us" << endl;
     return predictions;
 }
 
