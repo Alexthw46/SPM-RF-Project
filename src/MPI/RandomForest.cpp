@@ -76,23 +76,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
     return total_time;
 }
 
-// Predict for one sample
-int RandomForest::predict(const vector<double> &x) const {
-    unordered_map<int, int> vote_count;
-    // Collect votes from each tree
-    for (const auto &t: trees) {
-        if (t.hasFlat() || t.root) // sanity check that tree is trained, in either representation
-        {
-            int p = t.predict(x);
-            vote_count[p]++;
-        }
-    } // Return label with most votes
-    return ranges::max_element(vote_count.begin(), vote_count.end(),
-                               [](const auto &a, const auto &b) { return a.second < b.second; })->first;
-}
-
 // Batch prediction
-
 std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<double> > &X) const {
     // Data is fully replicated on each rank, but each rank only has a subset of trees
     int rank, n_ranks;
@@ -119,23 +103,25 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     vector global_votes(N * n_classes, 0);
     MPI_Allreduce(local_votes.data(), global_votes.data(), static_cast<int>(N * n_classes), MPI_INT, MPI_SUM,
                   MPI_COMM_WORLD);
-    // Determine final predictions
+    // Determine final predictions, only needed on rank 0
     vector<int> predictions(N);
-    for (size_t i = 0; i < N; ++i) {
-        int best_class = 0;
-        int best_count = global_votes[i * n_classes];
-        for (int c = 1; c < n_classes; ++c) {
-            if (const int count = global_votes[i * n_classes + c]; count > best_count) {
-                best_count = count;
-                best_class = c;
+    if (rank == 0) {
+#pragma omp parallel for schedule(static) default(none) shared(global_votes, predictions, N, n_classes)
+        for (size_t i = 0; i < N; ++i) {
+            int best_class = 0;
+            int best_count = global_votes[i * n_classes];
+            for (int c = 1; c < n_classes; ++c) {
+                if (const int count = global_votes[i * n_classes + c]; count > best_count) {
+                    best_count = count;
+                    best_class = c;
+                }
             }
+            predictions[i] = best_class;
         }
-        predictions[i] = best_class;
-    }
-    const auto endT = chrono::high_resolution_clock::now();
-    if (rank == 0)
+        const auto endT = chrono::high_resolution_clock::now();
         cout << "[Timing Rank " << rank << "] RandomForest predict_batch() total time: "
                 << chrono::duration_cast<chrono::microseconds>(endT - startT).count()
                 << " us" << endl;
+    }
     return predictions;
 }

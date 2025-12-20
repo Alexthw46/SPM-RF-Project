@@ -97,19 +97,6 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
     return total_time;
 }
 
-// Predict for one sample
-int RandomForest::predict(const vector<double> &x) const {
-    vector vote_count(n_classes, 0);
-    // Collect votes from each tree
-    for (const auto &t: trees) {
-        const int p = t.predict(x);
-        vote_count[p]++;
-    }
-    // Return label with most votes
-    return static_cast<int>(std::distance(vote_count.begin(),
-                                          ranges::max_element(vote_count)));
-}
-
 // Batch prediction
 vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &X, unsigned int parallelMode) const {
     const size_t N = X.size();

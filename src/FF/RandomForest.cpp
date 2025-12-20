@@ -58,19 +58,6 @@ long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     return std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count();
 }
 
-// Predict for one sample
-int RandomForest::predict(const vector<double> &x) const {
-    unordered_map<int, int> vote_count;
-    // Collect votes from each tree
-    for (const auto &t: trees) {
-        int p = t.predict(x);
-        vote_count[p]++;
-    }
-    // Return label with most votes
-    return ranges::max_element(vote_count.begin(), vote_count.end(),
-                               [](const auto &a, const auto &b) { return a.second < b.second; })->first;
-}
-
 std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<double> > &X) const {
     std::vector<int> predictions(X.size());
     const size_t nCores = ff_numCores();

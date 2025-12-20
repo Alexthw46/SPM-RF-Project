@@ -36,7 +36,15 @@ public:
      * @param x Feature vector of the sample to predict.
      * @return Predicted class label.
      */
-    [[nodiscard]] int predict(const std::vector<double> &x) const;
+    [[nodiscard]] int predict(const std::vector<double> &x) const {
+        if (trees.empty()) return -1;
+        std::vector vote_count(n_classes, 0);
+        for (const auto &t : trees) {
+            if (const int p = t.predict(x); p >= 0 && p < n_classes) ++vote_count[p];
+        }
+        const auto it = std::ranges::max_element(vote_count);
+        return static_cast<int>(std::distance(vote_count.begin(), it));
+    }
 
     /**
      * @brief Predict class labels for a batch of samples.
