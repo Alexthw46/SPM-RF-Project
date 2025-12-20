@@ -107,11 +107,63 @@ public:
         return static_cast<double>(correct) / static_cast<double>(predictions.size());
     }
 
+    static double f1_score(const std::vector<int> &y_true,
+                           const std::vector<int> &y_pred) {
+        if (y_true.size() != y_pred.size() || y_true.empty()) {
+            return 0.0;
+        }
+
+        // collect labels
+        std::set<int> labels_set;
+        labels_set.insert(y_true.begin(), y_true.end());
+        labels_set.insert(y_pred.begin(), y_pred.end());
+        const std::vector<int> labels(labels_set.begin(), labels_set.end());
+
+        std::map<int, int> tp, fp, fn, support;
+        for (int lbl: labels) {
+            tp[lbl] = fp[lbl] = fn[lbl] = support[lbl] = 0;
+        }
+
+        for (size_t i = 0; i < y_true.size(); ++i) {
+            int t = y_true[i];
+
+            if (int p = y_pred[i]; t == p) {
+                ++tp[t];
+            } else {
+                ++fp[p];
+                ++fn[t];
+            }
+            ++support[t];
+        }
+
+        double weighted_f1 = 0.0;
+        int total_support = 0;
+
+        for (int lbl: labels) {
+            const int t = tp[lbl];
+            const int fpv = fp[lbl];
+            const int fnv = fn[lbl];
+            const int sup = support[lbl];
+
+            const double precision = (t + fpv > 0) ? static_cast<double>(t) / (t + fpv) : 0.0;
+            const double recall = (t + fnv > 0) ? static_cast<double>(t) / (t + fnv) : 0.0;
+            const double f1 = (precision + recall > 0.0)
+                                  ? 2.0 * precision * recall / (precision + recall)
+                                  : 0.0;
+
+            weighted_f1 += f1 * sup;
+            total_support += sup;
+        }
+
+        return (total_support > 0) ? weighted_f1 / total_support : 0.0;
+    }
+
+
     static std::string classification_report(const std::vector<int> &y_true,
                                              const std::vector<int> &y_pred,
                                              int width_name = 9,
                                              int width_val = 9,
-                                             int precision = 2) {
+                                             int float_precision = 2) {
         if (y_true.size() != y_pred.size() || y_true.empty()) {
             return {};
         }
@@ -164,19 +216,19 @@ public:
         double macro_p = 0.0, macro_r = 0.0, macro_f1 = 0.0;
         double weighted_p = 0.0, weighted_r = 0.0, weighted_f1 = 0.0;
         int total_support = std::accumulate(support.begin(), support.end(), 0,
-                                            [](int acc, const std::pair<const int, int> &kv) {
+                                            [](const int acc, const std::pair<const int, int> &kv) {
                                                 return acc + kv.second;
                                             });
 
         for (int lbl: labels) {
-            auto m = metrics[lbl];
-            macro_p += m.precision;
-            macro_r += m.recall;
-            macro_f1 += m.f1;
+            auto [precision, recall, f1, sup] = metrics[lbl];
+            macro_p += precision;
+            macro_r += recall;
+            macro_f1 += f1;
 
-            weighted_p += m.precision * m.sup;
-            weighted_r += m.recall * m.sup;
-            weighted_f1 += m.f1 * m.sup;
+            weighted_p += precision * sup;
+            weighted_r += recall * sup;
+            weighted_f1 += f1 * sup;
         }
 
         if (int n_labels = static_cast<int>(labels.size()); n_labels > 0) {
@@ -192,7 +244,7 @@ public:
 
         // format output
         std::ostringstream out;
-        out << std::fixed << std::setprecision(precision);
+        out << std::fixed << std::setprecision(float_precision);
 
         out << std::setw(width_name) << " " << " "
                 << std::setw(width_val) << "precision" << " "
@@ -201,12 +253,12 @@ public:
                 << std::setw(width_val) << "support" << "\n\n";
 
         for (int lbl: labels) {
-            auto m = metrics[lbl];
+            auto [precision, recall, f1, sup] = metrics[lbl];
             out << std::setw(width_name) << lbl << " "
-                    << std::setw(width_val) << m.precision << " "
-                    << std::setw(width_val) << m.recall << " "
-                    << std::setw(width_val) << m.f1 << " "
-                    << std::setw(width_val) << m.sup << "\n";
+                    << std::setw(width_val) << precision << " "
+                    << std::setw(width_val) << recall << " "
+                    << std::setw(width_val) << f1 << " "
+                    << std::setw(width_val) << sup << "\n";
         }
 
         out << "\n" << std::setw(width_name) << "macro avg" << " "

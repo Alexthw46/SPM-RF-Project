@@ -43,14 +43,14 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
         auto t_end = chrono::high_resolution_clock::now();
 
         cout << "[Timing] Tree " << i << " trained in "
-                << chrono::duration_cast<chrono::milliseconds>(t_end - t_start).count()
-                << " ms" << endl;
+                << chrono::duration_cast<chrono::microseconds>(t_end - t_start).count()
+                << " us" << endl;
     }
 
     const auto total_end = chrono::high_resolution_clock::now();
     cout << "[Timing] RandomForest fit() total time: "
-            << chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count()
-            << " ms" << endl;
+            << chrono::duration_cast<chrono::microseconds>(total_end - total_start).count()
+            << " us" << endl;
 }
 
 // Predict for one sample

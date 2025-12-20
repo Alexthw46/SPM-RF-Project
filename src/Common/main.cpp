@@ -46,7 +46,7 @@ int main(const int argc, char *argv[]) {
     int n_trees = 100; // default value
     int max_depth = 10; // default value
     int global_seed = 42; // default value
-
+    bool only_parallel = false;
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
@@ -56,6 +56,8 @@ int main(const int argc, char *argv[]) {
             if (i + 1 < argc) { max_depth = stoi(argv[++i]); }
         } else if (a == "-s" || a == "--seed") {
             if (i + 1 < argc) global_seed = stoi(argv[++i]);
+        } else if (a == "--only-parallel" || a == "-p") {
+            only_parallel = true;
         } else {
             csv_file = a;
         }
@@ -116,6 +118,8 @@ int main(const int argc, char *argv[]) {
 
     cout << "Fastflow variant using: " << ff_numCores() << " devices\n";
     test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, 2);
+
+    if (only_parallel) return 0;
 
     cout << "Sequential variant\n";
     test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, 0);
