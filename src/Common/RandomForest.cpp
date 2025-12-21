@@ -91,7 +91,7 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
 
     const auto total_end = std::chrono::high_resolution_clock::now();
     const long total_time = std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count();
-    std::cout << "[Timing] RandomForest fit() total time: "
+    std::cout << "RandomForest fit() total time: "
             << total_time
             << " us\n";
     return total_time;
@@ -137,7 +137,7 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
     }
     const auto end = std::chrono::high_resolution_clock::now();
 
-    cout << "[Timing] RandomForest predict_batch() total time: "
+    cout << "RandomForest predict_batch() total time: "
             << chrono::duration_cast<chrono::microseconds>(end - start).count()
             << " us" << endl;
     return predictions;

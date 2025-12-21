@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     const int total_cores = static_cast<int>(std::thread::hardware_concurrency());
 
     // Compute threads per rank, at least 1
-    int threads_per_rank = total_cores; // std::max(1, total_cores / size);
+    int threads_per_rank = std::max(1, total_cores / size);
 
     omp_set_num_threads(threads_per_rank);
 

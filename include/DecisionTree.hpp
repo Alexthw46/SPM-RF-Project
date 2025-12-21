@@ -5,7 +5,7 @@
 
 class DecisionTree {
 public:
-    explicit DecisionTree(int max_depth_ = 5, int min_samples_ = 2,
+    explicit DecisionTree(int max_depth_ = 5, int min_samples_split = 2, int min_samples_leaf = 1,
                           unsigned int seed = std::random_device{}());
     void fit(const std::vector<std::vector<double>>& X, const std::vector<int>& y);
 
@@ -14,9 +14,10 @@ public:
     [[nodiscard]] std::vector<int> predict_batch(const std::vector<std::vector<double>> &X) const;
 
 private:
-    int max_depth;
-    int min_samples_split;
-    Node* root;
+    int max_depth{};
+    int min_samples_split{};
+    int min_samples_leaf{};
+    Node* root{};
     std::mt19937 gen;
 
     Node* build(const std::vector<std::vector<double>>& X,

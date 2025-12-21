@@ -114,7 +114,7 @@ public:
         const auto t_end = chrono::high_resolution_clock::now();
 
         if (ff_verbose)
-            cout << "[Timing] Tree trained in "
+            cout << "Tree trained in "
                     << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
                     << " ns\n";
 
@@ -340,7 +340,7 @@ public:
             const auto t_end = chrono::high_resolution_clock::now();
 
             if (ff_verbose)
-                cout << "[Timing] Tree trained in "
+                cout << "Tree trained in "
                         << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
                         << " ns\n";
         }

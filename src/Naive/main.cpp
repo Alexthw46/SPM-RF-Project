@@ -8,8 +8,8 @@ using namespace std;
 int main(const int argc, char *argv[]) {
     bool debug = false;
     string csv_file = "../test/Iris.csv";
-    int n_trees = 5; // preserve original Seq default
-    int max_depth = 5; // preserve original Seq default
+    int n_trees = 5;
+    int max_depth = 5;
 
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {

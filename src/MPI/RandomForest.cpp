@@ -70,7 +70,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
 
     const long total_time = chrono::duration_cast<chrono::microseconds>(total_end - total_start).count();
     if (rank == 0)
-        cout << "[Timing] RandomForest MPI fit() total time: "
+        cout << "RandomForest MPI fit() total time: "
                 << total_time
                 << " us\n";
     return total_time;
@@ -90,19 +90,37 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
     const auto startT = chrono::high_resolution_clock::now();
     vector local_votes(N * n_classes, 0);
-#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes\
+#pragma omp parallel default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes\
 )
-    for (size_t i = 0; i < N; ++i) {
-        for (size_t t = start_tree; t < end_tree; ++t) {
-            const int p = trees[t].predict(X[i]);
-#pragma omp atomic
-            local_votes[i * n_classes + p]++;
+    {
+        std::vector<int> thread_votes(N * n_classes, 0);
+
+#pragma omp for schedule(static)
+        for (size_t i = 0; i < N; ++i) {
+            for (size_t t = start_tree; t < end_tree; ++t) {
+                const int p = trees[t].predict(X[i]);
+                thread_votes[i * n_classes + p]++;
+            }
+        }
+
+#pragma omp critical
+        {
+            for (size_t j = 0; j < N * n_classes; ++j)
+                local_votes[j] += thread_votes[j];
         }
     }
-    // Reduce votes across all ranks
-    vector global_votes(N * n_classes, 0);
-    MPI_Allreduce(local_votes.data(), global_votes.data(), static_cast<int>(N * n_classes), MPI_INT, MPI_SUM,
-                  MPI_COMM_WORLD);
+    // Reduce votes on rank 0
+    std::vector<int> global_votes;
+    if (rank == 0)
+        global_votes.resize(N * n_classes);
+
+    MPI_Reduce(local_votes.data(),
+               rank == 0 ? global_votes.data() : nullptr,
+               static_cast<int>(N * n_classes),
+               MPI_INT,
+               MPI_SUM,
+               0,
+               MPI_COMM_WORLD);
     // Determine final predictions, only needed on rank 0
     vector<int> predictions(N);
     if (rank == 0) {

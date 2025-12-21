@@ -12,7 +12,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), gen(seed) {
     // Initialize trees
     for (int i = 0; i < n_t; i++)
-        trees.emplace_back(max_depth, 2, seed + i);
+        trees.emplace_back(max_depth, 2, 1, seed + i);
 }
 
 // Train forest with bootstrap samples
@@ -42,13 +42,13 @@ void RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
         t.fit(Xb, yb);
         auto t_end = chrono::high_resolution_clock::now();
 
-        cout << "[Timing] Tree " << i << " trained in "
+        cout << "Tree " << i << " trained in "
                 << chrono::duration_cast<chrono::microseconds>(t_end - t_start).count()
                 << " us" << endl;
     }
 
     const auto total_end = chrono::high_resolution_clock::now();
-    cout << "[Timing] RandomForest fit() total time: "
+    cout << "RandomForest fit() total time: "
             << chrono::duration_cast<chrono::microseconds>(total_end - total_start).count()
             << " us" << endl;
 }
@@ -74,7 +74,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
     for (auto &row: X)
         predictions.push_back(predict(row));
     const auto end = chrono::high_resolution_clock::now();
-    cout << "[Timing] RandomForest predict_batch() total time: "
+    cout << "RandomForest predict_batch() total time: "
             << chrono::duration_cast<chrono::nanoseconds>(end - start).count()
             << " ns" << endl;
     return predictions;

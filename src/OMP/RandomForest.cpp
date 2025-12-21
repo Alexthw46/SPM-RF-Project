@@ -52,14 +52,14 @@ long RandomForest::fit(const std::vector<std::vector<double> > &X,
         const auto t_end = std::chrono::high_resolution_clock::now();
         if (verbose)
 #pragma omp critical
-            std::cout << "[Timing] Tree " << i << " trained in "
+            std::cout << "Tree " << i << " trained in "
                     << std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count()
                     << " ns\n";
     }
 
     const auto total_end = std::chrono::high_resolution_clock::now();
     const long total_time = std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count();
-    std::cout << "[Timing] RandomForest fit() total time: "
+    std::cout << "RandomForest fit() total time: "
             << total_time
             << " ms\n";
     return total_time;
@@ -76,7 +76,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
         predictions[i] = predict(X[i]);
 
     const auto end = chrono::high_resolution_clock::now();
-    cout << "[Timing] RandomForest predict_batch() total time: "
+    cout << "RandomForest predict_batch() total time: "
             << chrono::duration_cast<chrono::microseconds>(end - start).count()
             << " us" << endl;
     return predictions;

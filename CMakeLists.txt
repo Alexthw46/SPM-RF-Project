@@ -29,9 +29,9 @@ add_executable(Comparison
 )
 
 add_executable(RandomForestSeq
-        src/Seq/main.cpp
-        src/Seq/DecisionTree.cpp
-        src/Seq/RandomForest.cpp
+        src/Naive/main.cpp
+        src/Naive/DecisionTree.cpp
+        src/Naive/RandomForest.cpp
 )
 
 add_executable(RandomForestOptimized

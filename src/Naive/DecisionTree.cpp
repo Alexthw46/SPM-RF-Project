@@ -10,8 +10,8 @@
 using namespace std;
 
 // Constructor
-DecisionTree::DecisionTree(const int max_depth_, const int min_samples_, const unsigned int seed)
-    : max_depth(max_depth_), min_samples_split(min_samples_), root(nullptr), gen(seed) {
+DecisionTree::DecisionTree(const int max_depth_, const int min_samples_split, const int min_samples_leaf, const unsigned int seed)
+    : max_depth(max_depth_), min_samples_split(min_samples_split), min_samples_leaf(min_samples_leaf), gen(seed) {
 }
 
 // Multi-class Gini impurity
@@ -139,7 +139,7 @@ Node *DecisionTree::build(const vector<vector<double> > &X, const vector<int> &y
     const auto t_end = chrono::high_resolution_clock::now();
     const auto duration = chrono::duration_cast<chrono::microseconds>(t_end - t_start).count();
     if (depth == 0) {
-        cout << "[Timing] Tree build completed in " << duration << " us" << endl;
+        cout << "Tree build completed in " << duration << " us" << endl;
     }
 
     return node;
@@ -160,7 +160,7 @@ void DecisionTree::fit(const vector<vector<double> > &X, const vector<int> &y) {
     const auto start = chrono::high_resolution_clock::now();
     root = build(X, y, 0);
     const auto end = chrono::high_resolution_clock::now();
-    cout << "[Timing] fit() total time: "
+    cout << "fit() total time: "
             << chrono::duration_cast<chrono::microseconds>(end - start).count()
             << " us" << endl;
 }
@@ -178,7 +178,7 @@ vector<int> DecisionTree::predict_batch(const vector<vector<double> > &X) const 
     for (auto &row: X)
         preds.push_back(predict_one(root, row));
     const auto end = chrono::high_resolution_clock::now();
-    cout << "[Timing] predict() batch time: "
+    cout << "predict() batch time: "
             << chrono::duration_cast<chrono::microseconds>(end - start).count()
             << " us" << endl;
     return preds;

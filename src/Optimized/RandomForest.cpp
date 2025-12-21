@@ -51,7 +51,7 @@ long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
         const auto t_end = chrono::high_resolution_clock::now();
 
         if (debug)
-            cout << "[Timing] Tree " << i << " trained in "
+            cout << "Tree " << i << " trained in "
                     << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
                     << " ns" << endl;
     }
@@ -59,7 +59,7 @@ long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
 
     const auto total_end = chrono::high_resolution_clock::now();
     const long total_time = chrono::duration_cast<chrono::microseconds>(total_end - total_start).count();
-    cout << "[Timing] RandomForest fit() total time: "
+    cout << "RandomForest fit() total time: "
             << total_time
             << " us" << endl;
     return std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_start).count();
@@ -85,7 +85,7 @@ vector<int> RandomForest::predict_batch(const vector<vector<double> > &X) const 
     for (auto &row: X)
         predictions.push_back(predict(row));
     const auto end = chrono::high_resolution_clock::now();
-    cout << "[Timing] RandomForest predict_batch() total time: "
+    cout << "RandomForest predict_batch() total time: "
             << chrono::duration_cast<chrono::microseconds>(end - start).count()
             << " us" << endl;
     return predictions;
