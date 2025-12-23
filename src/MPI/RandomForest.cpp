@@ -89,26 +89,28 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     if (verbose)
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
     const auto startT = chrono::high_resolution_clock::now();
-    vector local_votes(N * n_classes, 0);
+    std::vector local_votes(N * n_classes, 0);
 #pragma omp parallel default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes\
 )
+    // ReSharper disable CppDFALoopConditionNotUpdated
+    // CLion mistakenly flags some variables used for conditions as not updated in the loop
     {
-        std::vector<int> thread_votes(N * n_classes, 0);
+        // Each thread has its own vote accumulation array
+        std::vector thread_votes(N * n_classes, 0);
 
 #pragma omp for schedule(static)
         for (size_t i = 0; i < N; ++i) {
+            // Each thread accumulates votes for its assigned trees on all samples
             for (size_t t = start_tree; t < end_tree; ++t) {
-                const int p = trees[t].predict(X[i]);
-                thread_votes[i * n_classes + p]++;
+                thread_votes[i * n_classes + trees[t].predict(X[i])]++;
             }
         }
-
+        // Merge thread votes into local votes, instead of using atomic operations during the main loop
 #pragma omp critical
-        {
-            for (size_t j = 0; j < N * n_classes; ++j)
-                local_votes[j] += thread_votes[j];
-        }
+        for (size_t j = 0; j < N * n_classes; ++j)
+            local_votes[j] += thread_votes[j];
     }
+
     // Reduce votes on rank 0
     std::vector<int> global_votes;
     if (rank == 0)
