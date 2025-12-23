@@ -93,7 +93,6 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     for (size_t i = 0; i < N; ++i) {
         for (size_t t = start_tree; t < end_tree; ++t) {
             const int p = trees[t].predict(X[i]);
-#pragma omp atomic
             local_votes[i * n_classes + p]++;
         }
     }
@@ -109,6 +108,7 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
                MPI_SUM,
                0,
                MPI_COMM_WORLD);
+
     // Determine final predictions, only needed on rank 0
     vector<int> predictions(N);
     if (rank == 0) {
