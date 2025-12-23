@@ -99,6 +99,7 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     // Reduce votes on rank 0
     std::vector<int> global_votes;
     if (rank == 0)
+        // No need to allocate on other ranks
         global_votes.resize(N * n_classes);
 
     MPI_Reduce(local_votes.data(),

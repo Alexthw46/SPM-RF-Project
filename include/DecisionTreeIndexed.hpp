@@ -92,14 +92,7 @@ public:
         has_flat = true;
     }
 
-    [[nodiscard]] std::string getInfo() const {
-        // Dump the number of nodes in the tree and the max depth
-        size_t n_nodes = 0;
-        for ([[maybe_unused]] const auto &n: flat)
-            n_nodes++;
-        return "Nodes: " + std::to_string(n_nodes) + ", Max Depth: " + std::to_string(max_depth);
-    }
-
+    // Compute a hash of the flat tree representation for quick comparisons
     static size_t hash_tree(const std::vector<FlatNode> &flatTree) {
         size_t h = 0;
         for (const auto &n: flatTree)
@@ -120,7 +113,7 @@ public:
     Node *root = nullptr;
 
     /**
-     * @brief Serialize a tree into a flat vector of \c FlatNode entries using a preorder traversal.
+     * @brief Serialize a tree into a flat vector of \c FlatNode entries using a DFS traversal.
      *
      * This function appends a representation of the subtree rooted at \p node into \p out
      * and returns the index within \p out where the current node was placed.
