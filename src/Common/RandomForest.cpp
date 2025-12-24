@@ -29,7 +29,7 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
-    const size_t size = X.size(); // number of samples
+    const size_t size = X.size();
     chrono::time_point<chrono::system_clock, chrono::system_clock::duration> total_start;
 
     switch (parallelMode) {
@@ -41,7 +41,7 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             {
 
                 // Thread local variables to reuse in loop
-                std::minstd_rand rng(seed); // Use a lighter rng as we need to make a lot of indices
+                std::mt19937 rng(seed);
                 std::uniform_int_distribution<size_t> dist(0, size - 1);
                 std::vector<size_t> bootstrap_indices(size);
 
@@ -83,7 +83,7 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             total_start = chrono::high_resolution_clock::now();
             // Distribution to use for bootstrap sampling
             uniform_int_distribution<size_t> dist(0, X.size() - 1);
-            std::minstd_rand rng(seed);
+            std::mt19937 rng(seed);
             // Fit each tree on a bootstrap sample
             std::vector<size_t> bootstrap_idx(size);
             for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {

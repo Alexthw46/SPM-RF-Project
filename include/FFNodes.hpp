@@ -123,8 +123,8 @@ public:
 
     // allocated once per worker
 private:
-    /** @brief Per-worker RNG used for bootstrap sampling. */
-    minstd_rand rng;
+    /** @brief Per-worker Mersenne Twister RNG used for bootstrap sampling. */
+    mt19937 rng;
     /** @brief Uniform distribution used to draw bootstrap sample indices. */
     uniform_int_distribution<size_t> dist;
     /** @brief Reusable buffer holding bootstrap indices for the current fit call. */
@@ -350,8 +350,8 @@ public:
 
     // allocated once per worker
 private:
-    /** @brief Per-worker RNG used for bootstrap sampling. */
-    minstd_rand rng;
+    /** @brief Per-worker Mersenne Twister RNG used for bootstrap sampling. */
+    mt19937 rng;
     /** @brief Uniform distribution used to draw bootstrap sample indices. */
     uniform_int_distribution<size_t> dist;
     /** @brief Reusable buffer holding bootstrap indices for the current fit call. */

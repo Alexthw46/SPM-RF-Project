@@ -37,7 +37,7 @@ long RandomForest::fit(const std::vector<std::vector<double> > &X,
 #pragma omp parallel default(none) shared(Xc,y, verbose, cout, size, seed)
     {
         // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
-        std::minstd_rand rng(seed);
+        std::mt19937 rng(seed);
         // Reuse bootstrap indices vector as size is constant
         std::uniform_int_distribution<size_t> dist(0, size - 1);
         std::vector<size_t> bootstrap_indices(size);

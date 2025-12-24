@@ -34,7 +34,7 @@ long RandomForest::fit(const vector<vector<double> > &X, const vector<int> &y) {
     // Construct the flat column-major view
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
-    std::minstd_rand rng(seed);
+    std::mt19937 rng(seed);
     // Fit each tree on a bootstrap sample
     for (size_t i = 0; i < trees.size(); i++) {
         auto &t = trees[i];
