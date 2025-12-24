@@ -65,16 +65,15 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             ssize_t n_workers = ff_numCores();
             // Define workers
             vector<ff_node *> workers(n_workers);
-            ranges::generate(workers, [] { return new TreeWorkerRange(); });
+            ranges::generate(workers, [] { return new TreeWorker(); });
 
             // Setup Farm with Emitter
             ff_farm farm(workers);
 
             // Use explicit mapping for pinning
             farm.no_mapping();
-            farm.remove_collector();
             total_start = std::chrono::high_resolution_clock::now();
-            farm.add_emitter(new TreeBuildEmitterRange(trees, Xc, y, n_workers, seed));
+            farm.add_emitter(new TreeBuildEmitter(trees, Xc, y, seed));
             farm.run_and_wait_end();
             break;
         }

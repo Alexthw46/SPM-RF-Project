@@ -323,15 +323,15 @@ public:
         auto &[trees, X, y, begin, end, seed_base] = *static_cast<TreeRangeTask *>(task_ptr);
 
         const size_t n = X.n_samples;
-
-        bootstrap_indices.resize(n); // reuse buffer across trees as n is constant
+        std::mt19937 rng(seed_base);
+        std::uniform_int_distribution<size_t> dist(0, n - 1);
+        std::vector<size_t> bootstrap_indices(n);
 
         for (size_t i = begin; i < end; ++i) {
             const auto t_start = chrono::high_resolution_clock::now();
 
             rng.seed(seed_base + i);
-            dist = uniform_int_distribution<size_t>(0, n - 1);
-
+            
             // Fill bootstrap indices
             for (size_t j = 0; j < n; ++j)
                 bootstrap_indices[j] = dist(rng);
@@ -347,15 +347,6 @@ public:
 
         return GO_ON;
     }
-
-    // allocated once per worker
-private:
-    /** @brief Per-worker Mersenne Twister RNG used for bootstrap sampling. */
-    mt19937 rng;
-    /** @brief Uniform distribution used to draw bootstrap sample indices. */
-    uniform_int_distribution<size_t> dist;
-    /** @brief Reusable buffer holding bootstrap indices for the current fit call. */
-    vector<size_t> bootstrap_indices;
 };
 
 /**
