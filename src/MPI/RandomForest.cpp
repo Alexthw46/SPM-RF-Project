@@ -41,29 +41,26 @@ long RandomForest::fit(const vector<vector<double> > &X,
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
     const auto total_start = chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(static) default(none) shared(Xc, trees, y, start_tree, end_tree,\
+#pragma omp parallel default(none) shared(Xc, trees, y, start_tree, end_tree,\
     size, rank, seed, cout)
-    for (size_t idx = start_tree; idx < end_tree; ++idx) {
-        std::mt19937 rng(seed + idx);
-        std::uniform_int_distribution<size_t> dist(0, size - 1);
-
+    {
+        // Make it thread-local and reuse to reduce allocations, as size is constant
         std::vector<size_t> bootstrap_indices(size);
-        for (size_t j = 0; j < size; ++j)
-            bootstrap_indices[j] = dist(rng);
-
-        const auto t_start = chrono::high_resolution_clock::now();
-        trees[idx].fit(Xc, y, bootstrap_indices);
-        const auto t_end = chrono::high_resolution_clock::now();
-
-        if (verbose)
-#pragma omp critical
-            cout << "[Rank " << rank << "] Tree " << idx
-                    << " trained in "
-                    << chrono::duration_cast<chrono::nanoseconds>(t_end - t_start).count()
-                    << " ns\n";
+        std::uniform_int_distribution<size_t> dist(0, size - 1);
+        std::mt19937 rng(seed);
+#pragma omp for schedule(static)
+        // ReSharper disable once CppDFALoopConditionNotUpdated
+        for (size_t idx = start_tree; idx < end_tree; ++idx) {
+            rng.seed(seed + idx);
+            // Generates indices to create the bootstrap sample to build the tree
+            // ReSharper disable once CppDFALoopConditionNotUpdated
+            for (size_t j = 0; j < size; ++j)
+                bootstrap_indices[j] = dist(rng);
+            trees[idx].fit(Xc, y, bootstrap_indices);
+        }
     }
 
-    if (n_ranks > 1)
+    if (n_ranks > 1) // Needed to get the correct total time
         MPI_Barrier(MPI_COMM_WORLD);
     const auto total_end = chrono::high_resolution_clock::now();
 

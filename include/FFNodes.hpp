@@ -324,7 +324,7 @@ public:
 
         const size_t n = X.n_samples;
 
-        bootstrap_indices.resize(n); // reuse buffer across trees
+        bootstrap_indices.resize(n); // reuse buffer across trees as n is constant
 
         for (size_t i = begin; i < end; ++i) {
             const auto t_start = chrono::high_resolution_clock::now();

@@ -37,20 +37,26 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
             // OpenMP version
             total_start = std::chrono::high_resolution_clock::now();
             // Parallel loop over trees
-#pragma omp parallel for schedule(static) default(none) shared(Xc,y, verbose, cout, size, seed)
-            for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
-                // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
-                std::mt19937 rng(seed + i);
-                std::uniform_int_distribution<size_t> dist(0, size - 1);
+#pragma omp parallel default(none) shared(Xc,y, verbose, cout, size, seed)
+            {
 
+                // Thread local variables to reuse in loop
+                std::mt19937 rng(seed);
+                std::uniform_int_distribution<size_t> dist(0, size - 1);
                 std::vector<size_t> bootstrap_indices(size);
 
-                // Bootstrap indices
-                for (size_t j = 0; j < size; ++j)
-                    bootstrap_indices[j] = dist(rng);
+#pragma omp for schedule(static)
+                for (size_t i = 0; i < static_cast<size_t>(n_trees); ++i) {
+                    // Create a private RNG per tree to ensure deterministic, thread-safe bootstrap
+                    rng.seed(seed + i);
+                    // Bootstrap indices
+                    // ReSharper disable once CppDFALoopConditionNotUpdated
+                    for (size_t j = 0; j < size; ++j)
+                        bootstrap_indices[j] = dist(rng);
 
-                // Fit the tree
-                trees[i].fit(Xc, y, bootstrap_indices);
+                    // Fit the tree
+                    trees[i].fit(Xc, y, bootstrap_indices);
+                }
             }
             break;
         }
