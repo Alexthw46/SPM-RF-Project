@@ -293,6 +293,7 @@ public:
  *
  * @note Each worker maintains its own RNG and bootstrap indices buffer, to reuse the same memory slice across multiple trees.
  *
+ *
  **/
 class TreeWorkerRange final : public ff_node {
 public:

@@ -52,11 +52,7 @@ Node *DecisionTree::build(const View &Xc,
     std::vector<int> right_counts(n_classes);
 
     const size_t val_size = indices.size();
-    // Buffers for feature values and indices, to map after sorting without using AoS structure
-    std::vector<double> feature_values(val_size);
-    std::vector<size_t> feature_indices(val_size);
-    std::vector<double> sorted_vals(val_size);
-    std::vector<size_t> sorted_idxs(val_size);
+    std::vector<pair<double, size_t> > vals(val_size);
 
     // Start from sqrt(n_features) attempts and increase if needed, copy to avoid conflict
     int n_try_node = n_try;
@@ -64,32 +60,19 @@ Node *DecisionTree::build(const View &Xc,
     for (int k = 0; k < n_try_node; ++k) {
         const int f = feature_dist(gen);
 
-        // Extract feature values for the current indices
+        // collect (value, index) pairs for this feature
         for (size_t i = 0; i < val_size; ++i) {
             size_t idx = indices[i];
-            feature_values[i] = Xc(idx, f);
-            feature_indices[i] = idx;
+            vals[i].first = Xc(idx, f);
+            vals[i].second = idx;
         }
 
-        // Create permutation vector
-        std::vector<size_t> p(val_size);
-        std::iota(p.begin(), p.end(), 0);
-
-        // Sort p based on the values in feature_values
-        std::sort(p.begin(), p.end(), [&](const size_t i, const size_t j) {
-            return feature_values[i] < feature_values[j];
-        });
-
-        // Physically reorder to make memory linear for SIMD
-        for (size_t i = 0; i < val_size; ++i) {
-            sorted_vals[i] = feature_values[p[i]];
-            sorted_idxs[i] = feature_indices[p[i]];
-        }
+        // sort by feature value to skip identical values
+        std::sort(vals.begin(), vals.end(), [](auto &a, auto &b) { return a.first < b.first; });
 
         // left_counts: counts of labels on the left side of the split
         // right_counts: counts of labels on the right side of the split
         // initialize right to total counts and shrinks as samples move to left
-
         ranges::fill(left_counts, 0); // reset
         right_counts = counts; // copy
 
@@ -99,7 +82,7 @@ Node *DecisionTree::build(const View &Xc,
         // iterate potential split positions (only unique values)
         for (size_t i = 1; i < val_size; ++i) {
             // move sample i-1 to left side
-            const int label_i_1 = y[sorted_idxs[i - 1]];
+            const int label_i_1 = y[vals[i - 1].second];
             int *__restrict left = left_counts.data();
             int *__restrict right = right_counts.data();
 
@@ -107,8 +90,8 @@ Node *DecisionTree::build(const View &Xc,
             right[label_i_1] -= 1;
             ++left_n;
 
-            const double curr = sorted_vals[i];
-            const double prev = sorted_vals[i - 1];
+            const double curr = vals[i].first;
+            const double prev = vals[i - 1].first;
 
             // skip identical values for threshold
             if (curr == prev) continue;
