@@ -35,7 +35,7 @@ public:
 
         // Shuffle if requested
         if (shuffle) {
-            std::mt19937 gen(seed);
+            std::minstd_rand gen(seed);
             std::ranges::shuffle(indices, gen);
         }
 

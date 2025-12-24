@@ -47,7 +47,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
         // Make it thread-local and reuse to reduce allocations, as size is constant
         std::vector<size_t> bootstrap_indices(size);
         std::uniform_int_distribution<size_t> dist(0, size - 1);
-        std::mt19937 rng(seed);
+        std::minstd_rand rng(seed);
 #pragma omp for schedule(static)
         // ReSharper disable once CppDFALoopConditionNotUpdated
         for (size_t idx = start_tree; idx < end_tree; ++idx) {
