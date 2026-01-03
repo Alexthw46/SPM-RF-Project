@@ -92,8 +92,7 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
     const auto startT = chrono::high_resolution_clock::now();
     std::vector local_votes(N * n_classes, 0); // Local votes for this rank
-#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes
-)
+#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes)
     for (size_t i = 0; i < N; ++i) {
         for (size_t t = start_tree; t < end_tree; ++t) {
             const int p = trees[t].predict(X[i]); // Predict class for sample i with tree t, p in [0, n_classes-1]
