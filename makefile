@@ -30,7 +30,7 @@ OPENMP_FLAGS := -fopenmp
 
 # Sources per target
 COMPARISON_SRCS := src/Common/main.cpp src/Common/DecisionTree.cpp src/Common/RandomForest.cpp
-SEQ_SRCS        := src/Seq/main.cpp src/Seq/DecisionTree.cpp src/Seq/RandomForest.cpp
+SEQ_SRCS        := src/Naive/main.cpp src/Naive/DecisionTree.cpp src/Naive/RandomForest.cpp
 OPT_SRCS        := src/Optimized/main.cpp src/Optimized/RandomForest.cpp src/Common/DecisionTree.cpp
 FF_SRCS         := src/FF/main.cpp src/FF/RandomForest.cpp src/Common/DecisionTree.cpp
 OMP_SRCS        := src/OMP/main.cpp src/OMP/RandomForest.cpp src/Common/DecisionTree.cpp

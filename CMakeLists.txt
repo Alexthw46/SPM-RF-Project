@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(spm_project)
 
-# cerca ff/ff.hpp; considera anche variabile d'ambiente FF_HOME o ~/fastflow
 find_path(FASTFLOW_ROOT ff/ff.hpp PATHS $ENV{FF_HOME} $ENV{HOME}/fastflow)
 
 if (FASTFLOW_ROOT)
@@ -58,14 +57,9 @@ add_executable(RandomForestMPI
         src/Common/DecisionTree.cpp
 )
 
-add_executable(UnzipCovertype
-        test/CovertypeToCvs.cpp
-)
-
 target_link_libraries(Comparison PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(RandomForestOMP PUBLIC OpenMP::OpenMP_CXX)
 
 target_link_libraries(RandomForestMPI PUBLIC MPI::MPI_CXX OpenMP::OpenMP_CXX)
 
 find_package(ZLIB REQUIRED)
-target_link_libraries(UnzipCovertype PUBLIC ZLIB::ZLIB)

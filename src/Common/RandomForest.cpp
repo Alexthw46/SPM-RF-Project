@@ -69,7 +69,8 @@ long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
 
             // Setup Farm with Emitter
             ff_farm farm(workers);
-
+            // No collector, direct output to trees vector
+            farm.remove_collector();
             // Use explicit mapping for pinning
             farm.no_mapping();
             total_start = std::chrono::high_resolution_clock::now();
@@ -118,7 +119,8 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
         }
         case 2: {
             const size_t nCores = ff_numCores();
-            size_t chunk_size = std::min((X.size() + nCores - 1) / nCores, 64UL);
+            // Determine chunk size similarly to OpenMP static scheduling
+            size_t chunk_size = std::max((X.size() + nCores - 1) / nCores, 1UL);
             cout << "Predicting " << X.size() << " samples using " << nCores << " cores with chunk size " << chunk_size
                     << "." << endl;
             // Define Workers
@@ -127,6 +129,8 @@ vector<int> VersatileRandomForest::predict_batch(const vector<vector<double> > &
 
             // Setup Farm with Emitter
             ff_farm farm(workers);
+            // No collector, direct output to predictions vector
+            farm.remove_collector();
             farm.no_mapping();
             farm.add_emitter(new PredictEmitter(*this, X, predictions, chunk_size));
 

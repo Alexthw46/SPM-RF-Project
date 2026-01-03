@@ -134,7 +134,6 @@ private:
 /**
  * @brief FastFlow Worker node that predicts a contiguous chunk of samples.
  *
- *
  */
 class PredictWorker final : public ff_node {
     /**

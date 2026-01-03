@@ -4,7 +4,6 @@
 #include <omp.h>
 #include "DatasetHelper.hpp"
 #include "RandomForestIndexed.hpp"
-#include "TrainTestSplit.hpp"
 
 using namespace std;
 
@@ -33,24 +32,19 @@ int main(int argc, char *argv[]) {
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
 
-
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (rank == 0) {
-        if (provided < MPI_THREAD_FUNNELED) {
-            std::cerr << "MPI does not provide required thread support.\n";
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        } else {
-            std::cout << "MPI initialized with thread support level: " << provided << "\n";
-        }
+    if (rank == 0 && debug) {
+        std::cout << "MPI initialized with thread support level: " << provided << "\n";
     }
+
     // Total logical cores on the node
     const int total_cores = static_cast<int>(std::thread::hardware_concurrency());
 
     // Compute threads per rank, at least 1
-    int threads_per_rank = std::max(1, total_cores / size);
+    int threads_per_rank = std::max(1, total_cores);
 
     omp_set_num_threads(threads_per_rank);
 
@@ -104,7 +98,7 @@ int main(int argc, char *argv[]) {
 
     // Train-test split (80% train, 20% test)
     vector<size_t> train_indices, test_indices;
-    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices, true, global_seed);
+    DatasetHelper::split_indices(X.size(), 0.2, train_indices, test_indices, true, global_seed);
 
     if (rank == 0) {
         cout << "Train samples: " << train_indices.size()
@@ -112,12 +106,19 @@ int main(int argc, char *argv[]) {
     }
 
     // Create training subsets
-    const auto X_train = TrainTestSplit::subset_X(X, train_indices);
-    const auto y_train = TrainTestSplit::subset_y(y, train_indices);
+    const auto X_train = DatasetHelper::subset_X(X, train_indices);
+    const auto y_train = DatasetHelper::subset_y(y, train_indices);
 
     // Create test subsets
-    const auto X_test = TrainTestSplit::subset_X(X, test_indices);
-    const auto y_test = TrainTestSplit::subset_y(y, test_indices);
+    const auto X_test = DatasetHelper::subset_X(X, test_indices);
+    // Only rank 0 needs the test labels
+    const auto y_test = rank == 0 ? DatasetHelper::subset_y(y, test_indices) : vector<int>();
+
+    // Free original data memory
+    X.clear();
+    X.shrink_to_fit();
+    y.clear();
+    y.shrink_to_fit();
 
     // Create and train the random forest for this MPI process
     RandomForest rf(n_trees, max_depth, max_label + 1, global_seed);
@@ -135,7 +136,7 @@ int main(int argc, char *argv[]) {
     cout << "[Rank " << rank << "] Evaluating training accuracy...\n";
     const std::vector<int> train_predictions = rf.predict_batch(X_train, distribute_data_or_trees);
     if (rank == 0) {
-        const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
+        const double train_accuracy = DatasetHelper::accuracy(train_predictions, y_train);
         cout << "Training Accuracy: " << train_accuracy << endl;
     }*/
 
@@ -145,10 +146,10 @@ int main(int argc, char *argv[]) {
 
     const std::vector<int> test_predictions = rf.predict_batch(X_test);
     if (rank == 0) {
-        const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
+        const double test_accuracy = DatasetHelper::accuracy(test_predictions, y_test);
         cout << "Test Accuracy: " << test_accuracy << endl;
         cout << "Classification Report (Test):\n";
-        cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
+        cout << DatasetHelper::classification_report(y_test, test_predictions) << endl;
 
         // Write predictions to file
         const string n_ranks = std::to_string(size);

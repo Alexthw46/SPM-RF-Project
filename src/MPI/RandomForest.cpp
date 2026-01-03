@@ -5,7 +5,6 @@
 #include <random>
 #include <chrono>
 #include <iostream>
-#include <omp.h>
 #include <mpi.h>
 #include <vector>
 
@@ -20,7 +19,8 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
     // Initialize trees
     for (int i = 0; i < n_trees; i++)
-        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
+        // each tree gets unique, deterministic, seed
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i);
 }
 
 long RandomForest::fit(const vector<vector<double> > &X,
@@ -44,7 +44,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
 #pragma omp parallel default(none) shared(Xc, trees, y, start_tree, end_tree,\
     size, rank, seed, cout)
     {
-        // Make it thread-local and reuse to reduce allocations, as size is constant
+        // Bootstrap variables are thread-local and reused to reduce allocations, since size is constant
         std::vector<size_t> bootstrap_indices(size);
         std::uniform_int_distribution<size_t> dist(0, size - 1);
         std::mt19937 rng(seed);
@@ -56,20 +56,26 @@ long RandomForest::fit(const vector<vector<double> > &X,
             // ReSharper disable once CppDFALoopConditionNotUpdated
             for (size_t j = 0; j < size; ++j)
                 bootstrap_indices[j] = dist(rng);
-            trees[idx].fit(Xc, y, bootstrap_indices);
+            trees[idx].fit(Xc, y, bootstrap_indices); // Fit tree with bootstrap sample
         }
     }
 
-    if (n_ranks > 1) // Needed to get the correct total time
-        MPI_Barrier(MPI_COMM_WORLD);
-    const auto total_end = chrono::high_resolution_clock::now();
+    // Timer for the current rank
+    const auto rank_end = chrono::high_resolution_clock::now();
+    const long rank_time = chrono::duration_cast<chrono::microseconds>(rank_end - total_start).count();
 
+    if (n_ranks > 1) // Needed to get the correct total time, only if there are multiple ranks
+        MPI_Barrier(MPI_COMM_WORLD);
+
+    // Total timer including barriers
+    const auto total_end = chrono::high_resolution_clock::now();
     const long total_time = chrono::duration_cast<chrono::microseconds>(total_end - total_start).count();
     if (rank == 0)
         cout << "RandomForest MPI fit() total time: "
                 << total_time
-                << " us\n";
-    return total_time;
+                << " us\n"
+                << "Rank 0 training time before barrier: " << rank_time << " us" << endl;
+    return rank_time;
 }
 
 // Batch prediction
@@ -85,17 +91,19 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     if (verbose)
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
     const auto startT = chrono::high_resolution_clock::now();
-    std::vector local_votes(N * n_classes, 0);
-#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes)
+    std::vector local_votes(N * n_classes, 0); // Local votes for this rank
+#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes
+)
     for (size_t i = 0; i < N; ++i) {
         for (size_t t = start_tree; t < end_tree; ++t) {
-            const int p = trees[t].predict(X[i]);
+            const int p = trees[t].predict(X[i]); // Predict class for sample i with tree t, p in [0, n_classes-1]
             local_votes[i * n_classes + p]++;
+            // Unique index for each (i, p) pair, false sharing mitigated by omp static schedule
         }
     }
     // Reduce votes on rank 0
     std::vector<int> global_votes;
-    if (rank == 0)
+    if (rank == 0) // Only rank 0 needs to store the global votes
         global_votes.resize(N * n_classes);
 
     MPI_Reduce(local_votes.data(),
@@ -106,25 +114,28 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
                0,
                MPI_COMM_WORLD);
 
-    // Determine final predictions, only needed on rank 0
+    // Determine final predictions on rank 0
     vector<int> predictions(N);
     if (rank == 0) {
 #pragma omp parallel for schedule(static) default(none) shared(global_votes, predictions, N, n_classes)
         for (size_t i = 0; i < N; ++i) {
             int best_class = 0;
-            int best_count = global_votes[i * n_classes];
+
+            const size_t sample_vote_start_index = i * n_classes;
+            int best_count = global_votes[sample_vote_start_index]; // initialized with votes for class 0
             for (int c = 1; c < n_classes; ++c) {
-                if (const int count = global_votes[i * n_classes + c]; count > best_count) {
+                // start from class 1
+                if (const int count = global_votes[sample_vote_start_index + c]; count > best_count) {
                     best_count = count;
                     best_class = c;
                 }
             }
-            predictions[i] = best_class;
+            predictions[i] = best_class; // Writes to unique index. False sharing mitigated by omp static schedule
         }
         const auto endT = chrono::high_resolution_clock::now();
         cout << "[Timing Rank " << rank << "] RandomForest predict_batch() total time: "
                 << chrono::duration_cast<chrono::microseconds>(endT - startT).count()
                 << " us" << endl;
     }
-    return predictions;
+    return predictions; // Other ranks return empty vector
 }

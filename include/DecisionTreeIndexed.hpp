@@ -69,16 +69,23 @@ public:
              const std::vector<size_t> &indices) {
         n_features = Xc.n_features;
         n_try = std::max(1, static_cast<int>(sqrt(n_features)));
+        // Reset the tree if already trained
+        if (root != nullptr) {
+            delete root;
+            root = nullptr;
+        }
         // Start the recursive build from root using column-major view
         root = build(Xc, y, indices, 0);
 
         // Find the bound to reserve space for flat representation
+        // Estimation based on max depth and number of samples,
+        // Vector will resize if more space is needed but this should reduce reallocations in most cases
         const size_t bound1 = (static_cast<size_t>(1) << (max_depth + 1)) - 1;
         const size_t bound2 = 2 * indices.size() - 1;
 
         // Create flat representation for prediction
         const size_t reserve_size = std::min(bound1, bound2);
-        flat.clear();
+        flat.clear(); // in case of re-fitting
         flat.reserve(reserve_size);
         dfs_flat(root, flat);
         has_flat = true;

@@ -4,7 +4,6 @@
 #include "RandomForestIndexed.hpp"
 #include "DatasetHelper.hpp"
 #include <ff/ff.hpp>
-#include "TrainTestSplit.hpp"
 using namespace std;
 
 void test_random_forest(const bool debug, const int n_trees, const int max_depth, const int global_seed,
@@ -27,24 +26,24 @@ void test_random_forest(const bool debug, const int n_trees, const int max_depth
     DatasetHelper::writeToCSV(test_filename.c_str(), test_predictions);
 
     /*
-    const double train_accuracy = TrainTestSplit::accuracy(train_predictions, y_train);
+    const double train_accuracy = DatasetHelper::accuracy(train_predictions, y_train);
     cout << "Training Accuracy: " << train_accuracy << endl;
     cout << "Classification Report (Train):\n";
-    cout << TrainTestSplit::classification_report(y_train, train_predictions) << endl;
+    cout << DatasetHelper::classification_report(y_train, train_predictions) << endl;
     */
     if (debug) {
-        const double test_accuracy = TrainTestSplit::accuracy(test_predictions, y_test);
+        const double test_accuracy = DatasetHelper::accuracy(test_predictions, y_test);
         cout << "Test Accuracy: " << test_accuracy << endl;
         cout << "Classification Report (Test):\n";
-        cout << TrainTestSplit::classification_report(y_test, test_predictions) << endl;
+        cout << DatasetHelper::classification_report(y_test, test_predictions) << endl;
     }
 }
 
 int main(const int argc, char *argv[]) {
-    bool debug = false;
-    string csv_file = "../test/Iris.csv";
+    bool debug = true;
+    string csv_file = "../test/magic04.data";
     int n_trees = 100; // default value
-    int max_depth = 10; // default value
+    int max_depth = 100; // default value
     int global_seed = 42; // default value
     bool only_parallel = false;
     for (int i = 1; i < argc; ++i) {
@@ -82,36 +81,28 @@ int main(const int argc, char *argv[]) {
         cerr << "Mismatch between features and labels sizes\n";
     }
 
-    // Print first few rows for debugging
-    if (debug) {
-        const size_t to_print = min<size_t>(5, X.size());
-        for (size_t i = 0; i < to_print; ++i) {
-            cout << "Row " << i << ": [";
-            for (size_t j = 0; j < X[i].size(); ++j) {
-                cout << X[i][j];
-                if (j + 1 < X[i].size()) cout << ", ";
-            }
-            cout << "] -> " << y[i] << "\n";
-        }
-    }
     // Infer number of classes from labels
     const int max_label = *ranges::max_element(y);
     cout << "Inferred number of classes: " << (max_label + 1) << "\n";
 
     // Train-test split (80% train, 20% test)
     vector<size_t> train_indices, test_indices;
-    TrainTestSplit::split_indices(X.size(), 0.2, train_indices, test_indices, true, global_seed);
+    DatasetHelper::split_indices(X.size(), 0.2, train_indices, test_indices, true, global_seed);
 
     cout << "Train samples: " << train_indices.size()
             << ", Test samples: " << test_indices.size() << "\n";
 
     // Create training subsets
-    const auto X_train = TrainTestSplit::subset_X(X, train_indices);
-    const auto y_train = TrainTestSplit::subset_y(y, train_indices);
+    const auto X_train = DatasetHelper::subset_X(X, train_indices);
+    const auto y_train = DatasetHelper::subset_y(y, train_indices);
 
     // Create test subsets
-    const auto X_test = TrainTestSplit::subset_X(X, test_indices);
-    const auto y_test = TrainTestSplit::subset_y(y, test_indices);
+    const auto X_test = DatasetHelper::subset_X(X, test_indices);
+    const auto y_test = DatasetHelper::subset_y(y, test_indices);
+
+    // Free original data memory
+    X.clear(); X.shrink_to_fit();
+    y.clear(); y.shrink_to_fit();
 
     cout << "OpenMP variant using: " << omp_get_max_threads() << " devices\n";
     test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, 1);
