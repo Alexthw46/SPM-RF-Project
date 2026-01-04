@@ -17,10 +17,20 @@ constexpr bool verbose = false;
 // Constructor
 RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, const unsigned int seed)
     : n_trees(n_t), max_depth(max_depth), n_classes(n_classes), seed(seed) {
+    int rank, n_ranks;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
+
+    const size_t trees_per_rank = (n_trees + n_ranks - 1) / n_ranks;
+    const size_t start_tree = rank * trees_per_rank;
+
+    const size_t local_trees = min(rank * trees_per_rank + trees_per_rank, static_cast<size_t>(n_trees)) - start_tree;
+    trees.reserve(local_trees);
     // Initialize trees
-    for (int i = 0; i < n_trees; i++)
+    for (size_t i = 0; i < local_trees; i++)
         // each tree gets unique, deterministic, seed
-        trees.emplace_back(max_depth, 2, 1, n_classes, seed + i);
+        trees.emplace_back(max_depth, 2, 1, n_classes, seed + start_tree + i);
 }
 
 long RandomForest::fit(const vector<vector<double> > &X,
@@ -31,7 +41,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
 
     const size_t trees_per_rank = (n_trees + n_ranks - 1) / n_ranks;
     const size_t start_tree = rank * trees_per_rank;
-    const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
+    const size_t local_trees = trees.size();
     const size_t size = X.size();
 
     // Create a flat column-major array from the row-major data
@@ -41,7 +51,7 @@ long RandomForest::fit(const vector<vector<double> > &X,
     const ColMajorViewFlat Xc{X_flat.data(), X.size(), X[0].size()};
 
     const auto total_start = chrono::high_resolution_clock::now();
-#pragma omp parallel default(none) shared(Xc, trees, y, start_tree, end_tree,\
+#pragma omp parallel default(none) shared(Xc, trees, y, start_tree, local_trees, \
     size, rank, seed, cout)
     {
         // Bootstrap variables are thread-local and reused to reduce allocations, since size is constant
@@ -50,8 +60,8 @@ long RandomForest::fit(const vector<vector<double> > &X,
         std::mt19937 rng(seed);
 #pragma omp for schedule(static)
         // ReSharper disable once CppDFALoopConditionNotUpdated
-        for (size_t idx = start_tree; idx < end_tree; ++idx) {
-            rng.seed(seed + idx);
+        for (size_t idx = 0; idx < local_trees; ++idx) {
+            rng.seed(seed + start_tree + idx);
             // Generates indices to create the bootstrap sample to build the tree
             // ReSharper disable once CppDFALoopConditionNotUpdated
             for (size_t j = 0; j < size; ++j)
@@ -86,20 +96,24 @@ std::vector<int> RandomForest::predict_batch(const std::vector<std::vector<doubl
     MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
     const size_t N = X.size();
     const size_t trees_per_rank = (n_trees + n_ranks - 1) / n_ranks;
-    const size_t start_tree = rank * trees_per_rank;
-    const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
-    if (verbose)
+    const size_t local_trees = trees.size();
+    if (verbose) {
+        const size_t start_tree = rank * trees_per_rank;
+        const size_t end_tree = min(start_tree + trees_per_rank, static_cast<size_t>(n_trees));
         cout << "[Rank " << rank << "] Predicting with trees " << start_tree << " to " << end_tree - 1 << endl;
+    }
     const auto startT = chrono::high_resolution_clock::now();
     std::vector local_votes(N * n_classes, 0); // Local votes for this rank
-#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, start_tree, end_tree, trees, N, n_classes)
+#pragma omp parallel for schedule(static) default(none) shared(X, local_votes, local_trees, trees, N, n_classes\
+)
     for (size_t i = 0; i < N; ++i) {
-        for (size_t t = start_tree; t < end_tree; ++t) {
+        for (size_t t = 0; t < local_trees; ++t) {
             const int p = trees[t].predict(X[i]); // Predict class for sample i with tree t, p in [0, n_classes-1]
             local_votes[i * n_classes + p]++;
             // Unique index for each (i, p) pair, false sharing mitigated by omp static schedule
         }
     }
+
     // Reduce votes on rank 0
     std::vector<int> global_votes;
     if (rank == 0) // Only rank 0 needs to store the global votes
