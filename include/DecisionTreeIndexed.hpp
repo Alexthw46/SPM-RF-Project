@@ -59,7 +59,7 @@ struct RowMajorView {
     double operator()(const size_t i, const size_t f) const { return data[i][f]; }
 };
 
-class DecisionTree {
+struct alignas(64) DecisionTree {
 public:
     DecisionTree(int max_depth_, int min_samples_, int min_samples_leaf_, int n_classes, unsigned int seed);
 
