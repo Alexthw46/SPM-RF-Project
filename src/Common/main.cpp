@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 #include <iostream>
-#include  <omp.h>
+#include <omp.h>
 #include "RandomForestIndexed.hpp"
 #include "DatasetHelper.hpp"
 #include <ff/ff.hpp>
@@ -46,6 +46,7 @@ int main(const int argc, char *argv[]) {
     int max_depth = 100; // default value
     int global_seed = 42; // default value
     bool only_parallel = false;
+    bool weak_scaling_predict = false;
     for (int i = 1; i < argc; ++i) {
         if (string a = argv[i]; a == "-d" || a == "--debug") {
             debug = true;
@@ -57,6 +58,8 @@ int main(const int argc, char *argv[]) {
             if (i + 1 < argc) global_seed = stoi(argv[++i]);
         } else if (a == "--only-parallel" || a == "-p") {
             only_parallel = true;
+        } else if (a == "--weak-scaling-predict" || a == "-wsp") {
+            weak_scaling_predict = true;
         } else {
             csv_file = a;
         }
@@ -97,12 +100,31 @@ int main(const int argc, char *argv[]) {
     const auto y_train = DatasetHelper::subset_y(y, train_indices);
 
     // Create test subsets
-    const auto X_test = DatasetHelper::subset_X(X, test_indices);
-    const auto y_test = DatasetHelper::subset_y(y, test_indices);
+    auto X_test = DatasetHelper::subset_X(X, test_indices);
+    auto y_test = DatasetHelper::subset_y(y, test_indices);
+
+    if (weak_scaling_predict) {
+        // Scale up test set size according to number of threads
+        const uint n_threads = std::thread::hardware_concurrency(); // Slurm will handle the number of threads
+        vector<vector<double> > X_test_scaled;
+        vector<int> y_test_scaled;
+        X_test_scaled.reserve(X_test.size() * n_threads);
+        y_test_scaled.reserve(y_test.size() * n_threads);
+        for (int i = 0; i < n_threads; ++i) {
+            X_test_scaled.insert(X_test_scaled.end(), X_test.begin(), X_test.end());
+            y_test_scaled.insert(y_test_scaled.end(), y_test.begin(), y_test.end());
+        }
+        cout << "Scaled up test set size to: " << X_test_scaled.size() << " samples\n";
+        // Replace original test sets
+        X_test = std::move(X_test_scaled);
+        y_test = std::move(y_test_scaled);
+    }
 
     // Free original data memory
-    X.clear(); X.shrink_to_fit();
-    y.clear(); y.shrink_to_fit();
+    X.clear();
+    X.shrink_to_fit();
+    y.clear();
+    y.shrink_to_fit();
 
     cout << "OpenMP variant using: " << omp_get_max_threads() << " devices\n";
     test_random_forest(debug, n_trees, max_depth, global_seed, max_label, X_train, y_train, X_test, y_test, 1);
