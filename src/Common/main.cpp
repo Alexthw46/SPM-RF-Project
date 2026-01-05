@@ -105,7 +105,7 @@ int main(const int argc, char *argv[]) {
 
     if (weak_scaling_predict) {
         // Scale up test set size according to number of threads
-        const uint n_threads = std::thread::hardware_concurrency(); // Slurm will handle the number of threads
+        const uint n_threads = omp_get_max_threads(); // Slurm will handle the max number of threads
         vector<vector<double> > X_test_scaled;
         vector<int> y_test_scaled;
         X_test_scaled.reserve(X_test.size() * n_threads);
