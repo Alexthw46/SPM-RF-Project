@@ -18,7 +18,7 @@ RandomForest::RandomForest(const int n_t, int max_depth, const int n_classes, co
     for (int i = 0; i < n_trees; i++)
         trees.emplace_back(max_depth, 2, 1, n_classes, seed + i); // each tree gets unique deterministic seed
 }
-
+//
 // Train forest with bootstrap sampling (index-based, no copies)
 long VersatileRandomForest::fit(const std::vector<std::vector<double> > &X,
                                 const std::vector<int> &y, unsigned int parallelMode) {

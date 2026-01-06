@@ -1,7 +1,7 @@
 #!/bin/bash
 
 make clean
-#make Comparison
+make Comparison
 make RandomForestMPI
 
 # Magic04 dataset benchmarks

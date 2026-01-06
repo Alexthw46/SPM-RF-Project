@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
             debug = true;
         } else if (a == "-t" || a == "--trees") {
             if (i + 1 < argc) n_trees = stoi(argv[++i]);
-        } else if (a == "-md" || a == "--max-depth") {
+        } else if (a == "-m" || a == "-md" || a == "--max-depth") {
             if (i + 1 < argc) max_depth = stoi(argv[++i]);
         } else if (a == "-s" || a == "--seed") {
             if (i + 1 < argc) global_seed = stoi(argv[++i]);
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
         std::cout << "MPI initialized with thread support level: " << provided << "\n";
     }
 
-    // Compute threads per rank, at least 1
+    // Compute threads per rank
     int threads_per_rank = omp_get_max_threads();
 
     if (rank == 0)
