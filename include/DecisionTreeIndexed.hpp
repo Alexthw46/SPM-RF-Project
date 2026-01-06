@@ -74,8 +74,8 @@ public:
             delete root;
             root = nullptr;
         }
-        // Start the recursive build from root using column-major view
-        root = build(Xc, y, indices, 0);
+        // Start the recursive build from root using column-major view, use binary-optimized version if possible
+        root = n_classes == 2 ? build_bin(Xc, y, indices, 0) : build(Xc, y, indices, 0);
 
         // Find the bound to reserve space for flat representation
         // Estimation based on max depth and number of samples,
@@ -233,6 +233,12 @@ private:
 
     template<class View>
     Node *build(const View &Xc,
+                const std::vector<int> &y,
+                const std::vector<size_t> &indices,
+                int depth);
+
+    template<class View>
+    Node *build_bin(const View &Xc,
                 const std::vector<int> &y,
                 const std::vector<size_t> &indices,
                 int depth);
