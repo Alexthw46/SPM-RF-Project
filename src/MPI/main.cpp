@@ -40,17 +40,11 @@ int main(int argc, char *argv[]) {
         std::cout << "MPI initialized with thread support level: " << provided << "\n";
     }
 
-    // Total logical cores on the node
-    const int total_cores = static_cast<int>(std::thread::hardware_concurrency());
-
     // Compute threads per rank, at least 1
-    int threads_per_rank = std::max(1, total_cores);
-
-    omp_set_num_threads(threads_per_rank);
+    int threads_per_rank = omp_get_max_threads();
 
     if (rank == 0)
-        std::cout << "Total cores: " << total_cores
-                << ", MPI ranks: " << size
+        std::cout << "MPI ranks: " << size
                 << ", threads per rank: " << threads_per_rank << std::endl;
 
     vector<vector<double> > X;
