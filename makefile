@@ -31,21 +31,15 @@ OPENMP_FLAGS := -fopenmp
 # Sources per target
 COMPARISON_SRCS := src/Common/main.cpp src/Common/DecisionTree.cpp src/Common/RandomForest.cpp
 SEQ_SRCS        := src/Naive/main.cpp src/Naive/DecisionTree.cpp src/Naive/RandomForest.cpp
-OPT_SRCS        := src/Optimized/main.cpp src/Optimized/RandomForest.cpp src/Common/DecisionTree.cpp
-FF_SRCS         := src/FF/main.cpp src/FF/RandomForest.cpp src/Common/DecisionTree.cpp
-OMP_SRCS        := src/OMP/main.cpp src/OMP/RandomForest.cpp src/Common/DecisionTree.cpp
 MPI_SRCS        := src/MPI/main.cpp src/MPI/RandomForest.cpp src/Common/DecisionTree.cpp
 
 # Object lists (replace .cpp -> .o)
 COMPARISON_OBJS := $(COMPARISON_SRCS:.cpp=.o)
 SEQ_OBJS        := $(SEQ_SRCS:.cpp=.o)
-OPT_OBJS        := $(OPT_SRCS:.cpp=.o)
-FF_OBJS         := $(FF_SRCS:.cpp=.o)
-OMP_OBJS        := $(OMP_SRCS:.cpp=.o)
 MPI_OBJS        := $(MPI_SRCS:.cpp=.o)
 
 # Targets
-ALL_TARGETS := Comparison RandomForestSeq RandomForestOptimized RandomForestFF RandomForestOMP RandomForestMPI
+ALL_TARGETS := Comparison RandomForestSeq RandomForestMPI
 
 .PHONY: all clean
 all: $(ALL_TARGETS)
@@ -56,15 +50,6 @@ Comparison: $(COMPARISON_OBJS)
 
 RandomForestSeq: $(SEQ_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-RandomForestOptimized: $(OPT_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
-RandomForestFF: $(FF_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
-RandomForestOMP: $(OMP_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(OPENMP_FLAGS)
 
 RandomForestMPI: $(MPI_OBJS)
 	$(MPICXX) $(CXXFLAGS) -o $@ $^ $(OPENMP_FLAGS)

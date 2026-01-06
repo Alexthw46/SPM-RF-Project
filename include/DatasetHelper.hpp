@@ -214,6 +214,9 @@ public:
         return (total_support > 0) ? weighted_f1 / total_support : 0.0;
     }
 
+    /*
+     * @brief Generate a classification report similar to sklearn's classification_report.
+     */
     static std::string classification_report(const std::vector<int> &y_true,
                                              const std::vector<int> &y_pred,
                                              int width_name = 9,

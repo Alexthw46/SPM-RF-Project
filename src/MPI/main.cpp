@@ -73,19 +73,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Print first few rows for debugging (only rank 0)
-    if (rank == 0 && debug) {
-        const size_t to_print = min<size_t>(5, X.size());
-        for (size_t i = 0; i < to_print; ++i) {
-            cout << "Row " << i << ": [";
-            for (size_t j = 0; j < X[i].size(); ++j) {
-                cout << X[i][j];
-                if (j + 1 < X[i].size()) cout << ", ";
-            }
-            cout << "] -> " << y[i] << "\n";
-        }
-    }
-
     // Infer number of classes from labels
     const int max_label = *ranges::max_element(y);
     if (rank == 0) cout << "Inferred number of classes: " << (max_label + 1) << "\n";

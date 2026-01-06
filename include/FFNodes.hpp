@@ -6,7 +6,7 @@
 #include <random>
 #include <span>
 #include <vector>
-// ReSharper disable once CppUnusedIncludeDirective
+// ReSharper disable CppUnusedIncludeDirective
 #include <ff/ff.hpp>
 #include <ff/farm.hpp>
 
@@ -148,7 +148,6 @@ public:
     /**
      * @brief Process a single `PredictTask`.
      *
-     * Expected behavior:
      *  - If `task_ptr` == `FF_EOS`, propagate end-of-stream by returning `FF_EOS`.
      *  - Otherwise, cast `task_ptr` to `PredictTask *` and destructure the task.
      *  - For each sample in the chunk, call `RandomForest::predict` and store the
@@ -305,7 +304,6 @@ public:
     /**
      * @brief Process a single \c TreeRangeTask.
      *
-     * Expected behavior:
      *  - If \p task_ptr is \c FF_EOS, propagate end-of-stream by returning \c FF_EOS.
      *  - Otherwise, interpret \p task_ptr as a \c TreeRangeTask reference
      *  - For each tree in the specified range:

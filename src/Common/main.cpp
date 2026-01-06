@@ -40,7 +40,7 @@ void test_random_forest(const bool debug, const int n_trees, const int max_depth
 }
 
 int main(const int argc, char *argv[]) {
-    bool debug = true;
+    bool debug = false;
     string csv_file = "../test/magic04.data";
     int n_trees = 100; // default value
     int max_depth = 100; // default value
